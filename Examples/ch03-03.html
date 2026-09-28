@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>未定義的物件屬性</title>
+  </head>
+  <body>
+    <script>
+      const x = { a: 1 };
+
+      // 針對未定義的物件屬性取值
+      console.log(x.b); // undefined
+      console.log(x.b.c); // Uncaught TypeError: Cannot read properties of undefined (reading 'c')
+      console.log(x?.b?.c); // undefined
+
+      // 針對為定義的物件屬性賦值
+      x.b = { c: 3 };
+      console.log(x); // { a: 1, b: { c: 3 } }
+    </script>
+  </body>
+</html>

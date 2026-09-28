@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>變數與物件屬性的差異</title>
+  </head>
+  <body>
+    <script>
+      var a = 1;
+      let b = 2;
+      const c = 3;
+      const d = { e: 4 };
+
+      // 檢查變數是否成為全域物件的屬性
+      console.log(a, window.a); // 1 1
+      console.log(b, window.b); // 2 undefined
+      console.log(c, window.c); // 3 undefined
+      console.log(d, window.d); // { e: 4 } undefined
+
+      // 嘗試刪除變數與物件屬性
+      delete a;
+      console.log(a); // 1
+      delete b;
+      console.log(b); // 2
+      delete c;
+      console.log(c); // 3
+      delete d;
+      console.log(d); // { e: 4 }
+      delete d.e;
+      console.log(d); // {}
+    </script>
+  </body>
+</html>

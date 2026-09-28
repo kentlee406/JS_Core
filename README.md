@@ -1106,18 +1106,1145 @@ console.log(a.y.z); // 2 (未被影響)
 *(注意：JSON 做法無法複製 Function、Undefined、Symbol 或處理循環引用問題)*
 
 ### 3-2 物件取值、新增、刪除
+1. 可使用點記法或括弧記法取值與新增屬性
+2. 可使用delete刪除屬性
+3. [程式範例](./Examples/ch03-01.html)
+
 ### 3-3 變數與物件屬性的差異
+1. 檢查變數是否成為全域物件的屬性
+2. 嘗試刪除變數與物件屬性
+3. [程式範例](./Examples/ch03-02.html)
+
 ### 3-4 物件與純值
+在 JavaScript 中，所有的資料型態主要可以分為兩大類：**原始型態（Primitive Types，即純值）** 與 **物件型態（Object Types，包括物件、陣列、函式等）**。
+
+兩者最核心的差異在於**傳值（Pass by Value）與傳參考（Pass by Reference）**的記憶體運作機制，以及**是否具備可變性（Mutability）**。
+
+---
+
+#### 一、核心差異比較表
+
+| 特性 | 純值（Primitive / Primitives） | 物件（Objects） |
+| :--- | :--- | :--- |
+| **包含種類** | `number`, `string`, `boolean`, `null`, `undefined`, `symbol`, `bigint` | `Object`, `Array`, `Function`, `Date`, `RegExp` 等 |
+| **記憶體儲存方式** | 變數直接儲存**實際的值**（直接存放在 Stack 中） | 變數儲存的是**記憶體位址（參考/指標）**（實際內容放在 Heap 中） |
+| **可變性 (Mutability)** | **不可變（Immutable）** | **可變（Mutable）** |
+| **比較方式 (`==` / `===`)** | 比較**實際的值**是否相等 | 比較**記憶體位址**是否相同 |
+| **賦值與複製動作** | **傳值 (Pass by Value)**：複製一份獨立的新值 | **傳參考 (Pass by Reference)**：複製位址，指向同一塊資料 |
+
+---
+
+#### 二、詳細觀念與程式碼範例
+
+##### 差異一：不可變性 (Immutability) vs 可變性 (Mutability)
+
+* **純值不可變**：無法修改一個純值本身。對字串或數字進行運算時，只會「產生一個新的純值」，而不是修改原本的值。
+  ```javascript
+  let str = "hello";
+  str.toUpperCase(); // 回傳 "HELLO"，但不會改變原本的 str
+  console.log(str); // 輸出: "hello"
+
+  str = "world"; // 這是把變數重新指向新的純值 "world"，而不是修改 "hello" 本身
+  ```
+
+* **物件可變**：可以隨時新增、修改或刪除物件內部的屬性，而無需重新賦值給變數。
+  ```javascript
+  const person = { name: "Alice" };
+  person.name = "Bob"; // 直接修改物件內部的屬性
+  console.log(person.name); // 輸出: "Bob"
+  ```
+
+---
+
+##### 差異二：傳值 (Pass by Value) vs 傳參考 (Pass by Reference)
+
+* **純值（傳值）**：複製變數時，會建立一個完全獨立的新值，兩者互不影響。
+  ```javascript
+  let a = 10;
+  let b = a; // 複製一份 10 給 b
+  b = 20;    // 修改 b
+
+  console.log(a); // 10（a 完全不受影響）
+  console.log(b); // 20
+  ```
+
+* **物件（傳參考）**：複製物件變數時，複製的是「記憶體位址」。因此兩個變數會指向同一個物件，修改其中一個，另一個也會跟著改變。
+  ```javascript
+  let obj1 = { score: 100 };
+  let obj2 = obj1; // 複製的是記憶體位址
+  obj2.score = 50;  // 修改 obj2 屬性的同時，也等於修改了該位址的資料
+
+  console.log(obj1.score); // 50（obj1 也跟著變了！）
+  console.log(obj2.score); // 50
+  ```
+
+---
+
+##### 差異三：相等性比較 (Equality Comparison)
+
+* **純值**：只看「值」是否相同。
+  ```javascript
+  console.log("apple" === "apple"); // true
+  console.log(100 === 100);         // true
+  ```
+
+* **物件**：比較的是「記憶體位址」，即使內容一模一樣，只要不是同一個實體，就不相等。
+  ```javascript
+  let a = { id: 1 };
+  let b = { id: 1 };
+
+  console.log(a === b); // false！（因為它們存在於不同的記憶體位址）
+
+  let c = a;
+  console.log(a === c); // true （因為指向同一個位址）
+  ```
+
+---
+
+#### 三、常見例外與觀念補充：包裹物件 (Primitive Wrappers)
+
+純值雖然不是物件，但像 `'hello'.length` 或 `(123.456).toFixed(2)` 這類語法可以運作，是因為 JavaScript 在執行時會自動將純值轉為對應的**包裹物件（Wrapper Object）**（例如 `String`、`Number`、`Boolean`），執行完方法後再立即釋放掉。這個過程稱為 **Auto-boxing（自動裝箱）**。
+
 ### 3-5 未定義的物件屬性預設值
-### 3-6 物件的參考特性
-### 3-7 物件參考概念與實際運作模式
-### 3-8 Call by Reference vs. Call by Sharing
-### 3-9 淺拷貝與深拷貝
-### 3-10 陣列
-### 3-11 JSON
-### 3-12 課後練習
+[程式範例](./Examples/ch03-03.html)
+
+### 3-6 物件參考概念與實際運作模式
+請依據執行的步驟拆分頁面
+說明以下程式碼的執行結果
+```
+var a = { x: 1 };
+var b = a;
+a.x = { x: 2};
+a.y = a = { y: 1};
+console.log(a); // 結果？
+console.log(b); // 結果？
+```
+答案：
+| 步驟 | 最終答案 | 變數 a 參考 | 變數 b 參考 | 記憶體 0x01 | 記憶體 0x02 | 記憶體 0x03 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `var a = { x: 1 };` | | `0x01` | | `{ x: 1 }` | | |
+| `var b = a;` | | `0x01` | `0x01` | `{ x: 1 }` | | |
+| `a.x = { x: 2 };` | | `0x01` | `0x01` | `{ x: 0x02 }` | `{ x: 2 }` | |
+| `a.y = a = { y: 1 };` | | `0x03` | `0x01` | `{ x: 0x02, y: 0x03 }` | `{ x: 2 }` | `{ y: 1 }` |
+| `console.log(a);` | **`{ y: 1 }`** | | | | | |
+| `console.log(b);` | **`{ x: { x: 2 }, y: { y: 1 } }`** | | | | | |
+
+
+### 3-7 Call by Reference vs. Call by Sharing
+在 JavaScript 中，關於參數與變數傳遞機制，常見的說法是「基本型別是 Call by Value，物件是 Call by Reference」。然而，更嚴謹且精確的定義為：**JavaScript 永遠是 Call by Value，而傳遞物件時傳的是「參考的位址值 (Reference Value)」，這種行為稱為 Call by Sharing (按共享傳遞)**。
+
+---
+
+#### 什麼是 Call by Sharing？
+
+* **修改屬性 (Mutate Property)**：可以透過傳入的參考修改原物件內部的屬性，**外部會跟著改變**。
+* **重新賦值 (Reassignment)**：若對變數直接賦予新物件，只會改變該變數本身的指向，**不會影響**外部原有的變數。
+
+---
+
+#### 範例解析：從記憶體追蹤看 Call by Sharing
+
+以之前的程式碼為例：
+
+```javascript
+var a = { x: 1 };
+var b = a;
+
+// 1. 修改屬性
+a.x = { x: 2 };
+
+// 2. 連續賦值（包含重新賦值 a = ...）
+a.y = a = { y: 1 };
+```
+
+#### 記憶體狀態變化
+
+| 步驟 | 變數 a 指向 | 變數 b 指向 | 記憶體 0x01 (原物件) | 說明 |
+| :--- | :--- | :--- | :--- | :--- |
+| `var a = { x: 1 };` | `0x01` | - | `{ x: 1 }` | 建立物件 `0x01` |
+| `var b = a;` | `0x01` | `0x01` | `{ x: 1 }` | 共享相同位址 `0x01` |
+| `a.x = { x: 2 };` | `0x01` | `0x01` | `{ x: { x: 2 } }` | **修改屬性**：透過 `a` 修改 `0x01`，`b` 也能看到變化 |
+| `a.y = a = { y: 1 };` | **`0x03`** | `0x01` | `{ x: { x: 2 }, y: { y: 1 } }` | **重新賦值**：`a` 改指向新位址 `0x03`，但 `b` 依然保持指向 `0x01` |
+
+#### 為什麼這證明了不是純粹的 Call by Reference？
+
+若 JavaScript 是純粹的 **Call by Reference**：
+* 當 `a` 被重新賦值指向 `{ y: 1 }`（`0x03`）時，與它綁定的變數 `b` 也應該同步被改指向 `0x03`。
+
+然而實際結果是：
+* `console.log(a);` $\rightarrow$ `{ y: 1 }`（`0x03`）
+* `console.log(b);` $\rightarrow$ `{ x: { x: 2 }, y: { y: 1 } }`（`0x01`）
+
+這說明了 `b = a` 傳遞的是「位址值的副本」，而不是變數本身的別名綁定。
+
+---
+
+#### 函式參數中的 Call by Sharing
+
+這在函式傳參時表現得更為明顯：
+
+```javascript
+function updateObject(obj) {
+  // 1. 修改屬性：影響外部
+  obj.x = 100; 
+
+  // 2. 重新賦值：只切斷內部 obj 的指向，不影響外部 myObj
+  obj = { y: 200 }; 
+}
+
+let myObj = { x: 1 };
+updateObject(myObj);
+
+console.log(myObj); // 結果：{ x: 100 }
+```
+
+#### 運作過程分析
+1. 呼叫 `updateObject(myObj)` 時，將 `myObj` 存放的位址（例如 `0x01`）**複製一份**傳給參數 `obj`。
+2. `obj.x = 100` 透過位址 `0x01` 修改內部屬性 $\rightarrow$ 外部 `myObj` 受到影響。
+3. `obj = { y: 200 }` 讓 `obj` 改指向新位址 `0x02` $\rightarrow$ 複製出來的位址被覆蓋掉，但不影響外部 `myObj` 依然指向 `0x01`。
+
+---
+
+#### 三種傳遞機制比較
+
+| 機制 | 概念 | 能否修改物件內部？ | 重新賦值是否影響外部？ | 代表語言 / 情況 |
+| :--- | :--- | :---: | :---: | :--- |
+| **Call by Value** | 複製一份值傳入 | 否 | 否 | C、JS Primitive 型別 |
+| **Call by Reference** | 傳入變數本身的別名 | 是 | **是** | C++ (& reference) |
+| **Call by Sharing** | 複製一份「記憶體位址」傳入 | **是** | **否** | JavaScript 物件、Python、Ruby |
+
+### 3-8 淺拷貝與深拷貝
+* 淺拷貝：僅複製物件的第一層屬性。
+* 深拷貝：遞迴複製物件的所有層級。
+
+範例一：淺拷貝
+```
+const arr1 = ["mike", "andy"];
+const arr2 = arr1.slice(0); // 從第0個元素開始複製整個陣列
+const arr3 = [...arr1]; // 使用展開運算子複製整個陣列
+arr2[1] = "jacky";
+arr3[1] = "xuan";
+console.log(arr1);  // ["mike", "andy"]
+console.log(arr2);  // ["mike", "jacky"]
+console.log(arr3);  // ["mike", "xuan"]
+
+const obj1 = {
+  name: "mike",
+  age: 12,
+};
+const obj2 = Object.assign({}, obj1);  // 使用 Object.assign 複製整個物件，第一個參數為目標物件，後續參數為來源物件
+const obj3 = { ...obj1 };  // 使用展開運算子複製整個物件
+obj2.name = "andy";
+obj2.age = 100;
+obj3.name = "xuan";
+obj3.age = 55;
+console.log(obj1);  // { name: "mike", age: 12 }
+console.log(obj2);  // { name: "andy", age: 100 }
+console.log(obj3);  // { name: "xuan", age: 55 }
+```
+
+範例二：使用 lodash 的 cloneDeep 方法進行深拷貝
+```
+const obj1 = {
+   name: "kent",
+   info: {
+     age: 32,
+     interest: {
+       code: "javascript",
+     },
+   },
+ };
+ const obj2 = _.cloneDeep(obj1);
+ obj2.name = "jacky";
+ obj2.info.age = 100;
+ console.log(obj1); // 結果：{ name: "kent", info: { age: 32, interest: { code: "javascript" } } }
+ console.log(obj2); // 結果：{ name: "jacky", info: { age: 100, interest: { code: "javascript"}}}
+```
+
+範例三：使用 JSON 方法進行深拷貝
+```
+const obj1 = {
+  name: "kent",
+  info: {
+    age: 32,
+    interest: {
+code: "javascript",
+    },
+  },
+};
+function deepCopy(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
+const obj2 = deepCopy(obj1); // 使用自訂的 deepCopy 函式進行深拷貝
+obj2.name = "jacky";
+obj2.info.age = 100;
+console.log(obj1); // 結果：{ name: "kent", info: { age: 32, interest: { code: "javascript" } } }
+console.log(obj2); // 結果：{ name: "jacky", info: { age: 100, interest: { code: "javascript" }}}
+```
+[傳位址與淺拷貝的差異](https://share.gemini.google/DVC1lFZOUQSh)
+
+### 3-9 課後練習
+#### 第1題
+* 請確認物件設置是否有誤。
+* 請使用陣列 const functions=['fn1', 'fn2']呼叫物件內的函數。
+```
+let obj = {
+  str: "0",
+  num: 1,
+  boo: true,
+  arr: [2, 3],
+  obj: { x: 4, y: 5 },
+  fn1: function () {
+    return 6;
+  },
+  und: undefined,
+  nul: null,
+  "a-b": 7,
+  8: 8,
+  "a b": 9,
+  _ab: 10,
+  $ab: 11,
+  fn2: function(){
+    return 12;
+  }
+};
+```
+#### 第2題
+請從以下陣列物件中取得2
+```
+var a=[{b:{c:1}},{b:{c:2}}]
+```
+
+#### 第3題
+* 拆解每一步驟變數與記憶體參考位址
+* 寫出x, y, z的值
+```
+var x={};
+var y=x;
+var z=y={w:1};
+z.w=3;
+console.log(x,y,z);
+```
+
+#### 第4題
+請問以下JSON格式是否正確？如果不正確，請改正。
+```
+{
+  "a":1,
+  "b":2,
+}
+```
+
+#### 第5題
+請問以下程式碼的執行結果為何？請說明原因。
+```
+function g(){
+  a=1;
+}
+g.a=2
+console.log(g.a);
+```
+
+#### 第6題
+請問以下程式碼屬於淺拷貝還是深拷貝？執行結果為何？請說明原因。
+```
+var x=[{a:1, b:{c: 2}}];
+var y=[];
+x.forEach(item=>array.push(item));
+x[0].b.c=3;
+console.log(x[0].b.c, y[0].b.c);
+```
+
+#### 第7題
+請問以下程式碼執行結果為何？請說明原因。
+```
+var x=[1,2,3,4,5];
+var y=x;
+y[4]=6;
+console.log(x, y);
+```
+
+#### 第8題
+請問以下程式碼執行結果為何？另外如何取得"z"？請說明原因。
+```
+var a=function() { return "z"; }
+a.c="x";
+var b=a;
+b.c="y";
+console.log(a.c, b.c);
+```
+
+#### 第9題
+請問以下程式碼執行結果為何？請說明原因。
+```
+var a={x:1};
+var b=a={y:2};
+console.log(a.x, a.y, b.x, b.y);
+b.y=3;
+console.log(a.x, a.y, b.x, b.y);
+```
+
+#### 第10題
+某間冷飲店想開發單頁式商品訂購系統，但卻為了定義JavaScript物件結構而煩惱，而該冷飲店提出的需求如下：
+1. 冷飲共分為三類，產品與價格列表如下：
+  * 茶飲類包括：紅茶、綠茶、烏龍茶，全部30元
+  * 奶茶類包括：奶茶、珍珠奶茶、波霸奶茶，全部40元
+  * 果汁：檸檬汁、柚子茶、檸檬多多，全部45元
+2. 訂購冷飲時，提供以下選項供顧客選擇
+  * 甜度：0%~100% (以25%為單位)
+  * 冰塊：0%~90% (以30%為單位)
+  * 加料：波霸 (+15元)、珍珠(+10元)、燕麥(+15元)、椰果(+15元)
+  * 尺寸：中杯 (+0元)、大杯(+10元)
+3. 系統操作流程
+  * 訂購系統先選擇一項飲料→再讓使用者決定甜度、冰塊、加料、尺寸→最後加入至購物車。
+  * 接著使用者繼續選擇其他飲料完成上述動作，直到完成購買動作按下列印訂單。
+
+
+
+#### 答案
+1. 正確
+```
+functions.forEach(fnName => {
+  // 先檢查物件內是否存在該函數，避免名稱錯誤導致程式崩潰
+  if (typeof myObject[fnName] === 'function') {
+    myObject[fnName]();
+  }
+});
+```
+
+2. a[1].b.c
+
+3. x 為 `{}`，y 與 z 皆為 `{ w: 3 }`
+```
+var x={};        // 建立物件 A（位址 0x01），x → 0x01
+var y=x;         // y 複製 x 的參考，y → 0x01（與 x 指向同一物件 A）
+var z=y={w:1};   // 賦值由右往左：先建立物件 B（位址 0x02）{w:1}，y → 0x02，再將 y 的值給 z，z → 0x02
+z.w=3;           // 透過 z 修改物件 B 的屬性，B 變成 {w:3}（y 也指向 B）
+console.log(x,y,z); // 結果：{} { w: 3 } { w: 3 }
+```
+   * 重點：`y={w:1}` 是「重新賦值」，讓 y 指向新物件，而不是修改原本的物件 A，所以 x 不受影響。
+
+4. 不正確。JSON 不允許最後一個屬性後面有多餘的逗號（trailing comma）。
+```
+{
+  "a":1,
+  "b":2
+}
+```
+
+5. 結果：`2`
+   * 函式在 JavaScript 中也是物件，因此可以直接新增屬性，`g.a=2` 是在函式物件 g 上新增屬性 a。
+   * 函式內的 `a=1` 只有在呼叫 `g()` 時才會執行，且它是對「全域變數 a」賦值（未宣告變數），並不是設定 `g.a`，所以不影響結果。
+
+6. 屬於**淺拷貝**。
+   * 原程式碼有誤：箭頭函式的簡寫本體內不可加分號，且 `array` 未定義，應改為 `y.push(item)`：
+```
+var x=[{a:1, b:{c: 2}}];
+var y=[];
+x.forEach(item=>y.push(item));
+x[0].b.c=3;
+console.log(x[0].b.c, y[0].b.c); // 結果：3 3
+```
+   * 原因：y 雖然是一個新陣列，但 push 進去的 item 是物件的「參考」，x[0] 與 y[0] 指向同一個物件，因此修改 `x[0].b.c` 時 `y[0].b.c` 也會改變。
+
+7. 結果：`[1, 2, 3, 4, 6] [1, 2, 3, 4, 6]`
+   * 陣列也是物件，`y=x` 是複製參考（傳參考），x 與 y 指向同一個陣列，所以透過 y 修改元素，x 也會跟著改變。
+
+8. 
+```
+var a=function () { return "z"; }
+a.c="x";
+var b=a;
+b.c="y";
+console.log(a.c, b.c); // 結果：y y
+console.log(a(), b()); // 取得 "z"：呼叫函式 → z z
+```
+   * 原因：函式是物件，`b=a` 讓 a、b 指向同一個函式物件，所以 `b.c="y"` 會覆蓋 `a.c`。
+   * 要取得 "z" 必須「呼叫」函式，也就是 `a()` 或 `b()`。
+
+9. 結果：
+```
+var a={x:1};
+var b=a={y:2};  // 賦值由右往左：a 指向新物件 {y:2}，b 再取得 a 的參考，a、b 指向同一物件
+console.log(a.x, a.y, b.x, b.y); // 結果：undefined 2 undefined 2
+b.y=3;
+console.log(a.x, a.y, b.x, b.y); // 結果：undefined 3 undefined 3
+```
+   * 原因：原本的 `{x:1}` 已經沒有任何變數參考它，a 與 b 都指向 `{y:2}`，所以 x 為 undefined；透過 b 修改 y，a 也看得到變化。
+
+10. 物件結構設計如下：
+```
+// 1. 商品資料：以分類為單位，同類商品共用價格
+const menu = {
+  tea: { name: "茶飲類", price: 30, items: ["紅茶", "綠茶", "烏龍茶"] },
+  milkTea: { name: "奶茶類", price: 40, items: ["奶茶", "珍珠奶茶", "波霸奶茶"] },
+  juice: { name: "果汁類", price: 45, items: ["檸檬汁", "柚子茶", "檸檬多多"] },
+};
+
+// 2. 客製化選項
+const options = {
+  sugar: [0, 25, 50, 75, 100],   // 甜度（%）
+  ice: [0, 30, 60, 90],          // 冰塊（%）
+  toppings: {                    // 加料（可複選）
+    boba: { name: "波霸", price: 15 },
+    pearl: { name: "珍珠", price: 10 },
+    oat: { name: "燕麥", price: 15 },
+    coconut: { name: "椰果", price: 15 },
+  },
+  size: {
+    medium: { name: "中杯", price: 0 },
+    large: { name: "大杯", price: 10 },
+  },
+};
+
+// 3. 購物車與操作流程
+const cart = [];
+
+function addToCart(category, item, sugar, ice, toppings, size) {
+  const toppingPrice = toppings.reduce((sum, t) => sum + options.toppings[t].price, 0);
+  const order = {
+    item: item,
+    sugar: sugar,
+    ice: ice,
+    toppings: toppings.map(t => options.toppings[t].name),
+    size: options.size[size].name,
+    price: menu[category].price + toppingPrice + options.size[size].price,
+  };
+  cart.push(order);
+}
+
+function printOrder() {
+  let total = 0;
+  cart.forEach((order, i) => {
+    total += order.price;
+    console.log(`${i + 1}. ${order.item} / 甜度${order.sugar}% / 冰塊${order.ice}% / 加料：${order.toppings.join("、") || "無"} / ${order.size} / ${order.price}元`);
+  });
+  console.log(`總計：${total}元`);
+}
+
+// 使用範例
+addToCart("milkTea", "奶茶", 50, 30, ["pearl"], "large");  // 40 + 10 + 10 = 60
+addToCart("tea", "綠茶", 0, 0, [], "medium");               // 30
+printOrder();
+// 1. 奶茶 / 甜度50% / 冰塊30% / 加料：珍珠 / 大杯 / 60元
+// 2. 綠茶 / 甜度0% / 冰塊0% / 加料：無 / 中杯 / 30元
+// 總計：90元
+```
 
 ## 第四章  函式以及 This 的運作
+### 4-1 什麼是函式
+函式（Function）是一段「可重複呼叫」的程式碼區塊。在 JavaScript 中，函式本身也是一種**物件**（可呼叫的物件，callable object），因此可以擁有屬性、被賦值給變數、當作參數傳遞，也可以當作回傳值（一級函式，First-class Function）。
+
+#### 一、函式的基本架構
+```
+function 函式名稱(參數1, 參數2) {  // 1. function 關鍵字 2. 名稱 3. 參數
+  // 4. 函式本體（程式碼區塊）
+  return 回傳值;                    // 5. 回傳值（沒寫 return 時預設回傳 undefined）
+}
+函式名稱(引數1, 引數2);              // 6. 呼叫（呼叫時才會建立函式執行環境）
+```
+
+範例：請說明執行結構與原理
+```
+function a(x){
+  let y=1;
+  return [this, x, y];
+}
+let result=a(3);
+console.log(result);
+```
+
+執行結果（瀏覽器、非嚴格模式）：`[Window, 3, 1]`
+
+執行原理說明：
+1. **全域執行環境 — 創造階段**
+   * 函式陳述式 `a` 會被完整提升（函式本體一起存入記憶體）。
+   * `result` 以 let 宣告，也會提升但處於暫時性死區（TDZ），尚未初始化。
+2. **全域執行環境 — 執行階段**
+   * 執行到 `a(3)` 時，建立**函式執行環境**並推入執行堆疊（Call Stack）。
+3. **函式執行環境 — 創造階段**，會準備以下內容：
+   * `arguments`：類陣列物件 `{0: 3, length: 1}`。
+   * 參數 `x`：直接被賦值為引數 `3`。
+   * 區域變數 `y`：let 宣告，處於 TDZ。
+   * `this`：由「呼叫方式」決定，`a(3)` 屬於簡易呼叫，非嚴格模式下指向全域物件（瀏覽器為 `window`）。
+   * 外部環境參考（範圍鏈）：a 定義在全域，所以外層為全域環境。
+4. **函式執行環境 — 執行階段**
+   * `y=1` 完成初始化，接著 `return [this, x, y]` 回傳陣列。
+5. **結束**
+   * 函式執行環境從執行堆疊中移除，回傳值賦予 `result`，最後印出 `[Window, 3, 1]`。
+   * 若在嚴格模式（`'use strict'`）下執行，`this` 為 `undefined`，結果為 `[undefined, 3, 1]`。
+
+補充：函式是物件，因此擁有屬性
+```
+function a(x, y){}
+console.log(a.name);    // "a"：函式名稱
+console.log(a.length);  // 2：定義的參數數量
+a.note = "自訂屬性";     // 可以像物件一樣新增屬性
+console.log(typeof a);  // "function"
+```
+
+#### 二、函式陳述式(具名函式)與函式表達式(匿名函式)的差異
+```
+// 函式陳述式（Function Declaration）
+function fn1() { return 1; }
+
+// 函式表達式（Function Expression）：將函式當作「值」賦予變數
+var fn2 = function () { return 2; };
+```
+
+| 比較項目 | 函式陳述式 | 函式表達式 |
+| --- | --- | --- |
+| 是否需要名稱 | 必須有名稱 | 可省略（匿名函式） |
+| 提升（Hoisting） | 整個函式被提升，可在宣告前呼叫 | 只有變數被提升（var 為 undefined、let/const 為 TDZ） |
+| 結尾分號 | 不需要 | 屬於賦值陳述句，建議加上 |
+| 使用時機 | 一般工具函式 | 回呼函式、立即函式、依條件定義函式 |
+
+提升差異範例：
+```
+console.log(fn1()); // 1：函式陳述式已完整提升
+console.log(fn2()); // TypeError: fn2 is not a function（此時 fn2 為 undefined）
+
+function fn1() { return 1; }
+var fn2 = function () { return 2; };
+```
+
+* 是否有兩者同時混用的情形？
+
+  有，稱為**具名函式表達式（Named Function Expression, NFE）**：外觀像函式陳述式，但因為出現在賦值運算子右側，所以仍是「函式表達式」。
+```
+var fn = function inner(n) {
+  console.log(typeof inner); // "function"：函式名稱只能在函式內部使用
+  return n <= 1 ? 1 : n * inner(n - 1); // 常用於遞迴
+};
+
+console.log(fn(5));         // 120
+console.log(typeof inner);  // "undefined"：外部無法存取 inner
+inner(5);                   // ReferenceError: inner is not defined
+```
+   * 函式名稱 `inner` 只存在於函式自己的作用域，不會污染外部，也不會被提升。
+   * 優點：遞迴時不依賴外部變數名稱（即使 `fn` 被重新賦值也不影響）、除錯時錯誤堆疊會顯示函式名稱，比匿名函式更好追蹤。
+
+### 4-2 立即函式
+立即函式（IIFE, Immediately Invoked Function Expression）：定義完成後**立刻執行**的函式表達式。
+
+#### 一、基本語法
+```
+(function () {
+  console.log("立即執行");
+})();
+
+// 另一種寫法，效果相同
+(function () {
+  console.log("立即執行");
+}());
+
+// 傳入參數與取得回傳值
+var result = (function (a, b) {
+  return a + b;
+})(1, 2);
+console.log(result); // 3
+```
+* 外層的 `()` 讓 JavaScript 將 function 視為「表達式」而非「陳述式」，才能在後面加上 `()` 立即呼叫。
+* 直接寫 `function(){}()` 會出現 SyntaxError，因為以 function 開頭會被解析為函式陳述式。
+
+#### 二、用途
+1. **建立獨立作用域，避免污染全域**
+```
+(function () {
+  var count = 0; // 只存在於 IIFE 內部
+})();
+console.log(typeof count); // "undefined"
+```
+2. **搭配閉包保存私有變數**（模組模式，詳見 4-5）
+```
+var counter = (function () {
+  var count = 0;
+  return function () {
+    return ++count;
+  };
+})();
+console.log(counter()); // 1
+console.log(counter()); // 2
+```
+3. **將外部變數傳入，產生當下的副本**
+```
+var a = 1;
+(function (a) {
+  a = 2;          // 修改的是參數 a（區域變數）
+  console.log(a); // 2
+})(a);
+console.log(a);   // 1
+```
+
+#### 三、注意事項
+上一行沒有分號時，IIFE 開頭的 `(` 會被當成「呼叫」上一行的結果（參考 2-2 ASI），因此常見在 IIFE 前面加上分號：
+```
+var a = 1
+;(function () { console.log(a); })()
+```
+
+### 4-3 參數
+#### 一、參數（Parameter）與引數（Argument）
+* 參數：定義函式時括號內的變數名稱，屬於函式的區域變數。
+* 引數：呼叫函式時實際傳入的值。
+```
+function add(a, b) {  // a, b 為參數
+  return a + b;
+}
+add(1, 2);            // 1, 2 為引數
+```
+
+#### 二、引數數量不一致
+JavaScript 不會檢查引數數量：
+```
+function fn(a, b) {
+  console.log(a, b);
+}
+fn(1);        // 1 undefined：未傳入的參數為 undefined
+fn(1, 2, 3);  // 1 2：多傳入的引數會被忽略（但可透過 arguments 取得）
+```
+
+#### 三、arguments 物件
+* 每個一般函式執行時都會自動建立 `arguments`，內含所有傳入的引數。
+* 它是**類陣列（Array-like）**：有索引與 length，但沒有陣列方法（如 map、forEach）。
+* 箭頭函式沒有自己的 arguments。
+```
+function sum() {
+  console.log(arguments);        // [Arguments] { '0': 1, '1': 2, '2': 3 }
+  console.log(arguments.length); // 3
+  return Array.from(arguments).reduce((total, n) => total + n, 0); // 轉為陣列才能使用陣列方法
+}
+console.log(sum(1, 2, 3)); // 6
+```
+
+#### 四、ES6 預設參數與其餘參數
+```
+// 預設參數：未傳入或傳入 undefined 時才會使用預設值
+function greet(name = "訪客") {
+  return "Hello " + name;
+}
+console.log(greet());          // Hello 訪客
+console.log(greet(undefined)); // Hello 訪客
+console.log(greet(null));      // Hello null：null 不會觸發預設值
+
+// 其餘參數（Rest Parameters）：將剩餘引數收集成「真正的陣列」，必須放在最後一個
+function sum(first, ...others) {
+  console.log(first, others); // 1 [2, 3, 4]
+  return others.reduce((total, n) => total + n, first);
+}
+console.log(sum(1, 2, 3, 4)); // 10
+```
+
+#### 五、傳值與傳參考
+參數的行為與變數賦值相同（參考第三章）：
+* 原始型別：傳入值的**副本**，函式內修改不影響外部。
+* 物件型別：傳入**參考**，修改物件屬性會影響外部；但將參數重新賦值為新物件則不影響外部。
+```
+function change(num, obj1, obj2) {
+  num = 100;             // 修改副本
+  obj1.value = 100;      // 透過參考修改原物件
+  obj2 = { value: 100 }; // 參數指向新物件，與外部斷開
+}
+var n = 1, o1 = { value: 1 }, o2 = { value: 1 };
+change(n, o1, o2);
+console.log(n, o1.value, o2.value); // 1 100 1
+```
+
+#### 六、函式作為參數（回呼函式 Callback）
+函式是一級物件，因此可以作為參數傳入另一個函式，稍後再被呼叫：
+```
+function calculate(a, b, operation) {
+  return operation(a, b);
+}
+console.log(calculate(2, 3, function (x, y) { return x * y; })); // 6
+console.log(calculate(2, 3, (x, y) => x + y));                    // 5
+```
+
+### 4-4 閉包
+#### 一、定義
+閉包（Closure）：**函式與其定義時所在的語法環境（Lexical Environment）的組合**。
+當內部函式被回傳或傳到外部使用時，即使外部函式已經執行完畢，內部函式仍然可以存取外部函式的變數。
+
+形成閉包的條件：
+1. 函式內部有另一個函式。
+2. 內部函式使用了外部函式的變數。
+3. 內部函式在外部函式之外被使用（例如被 return 出去）。
+
+#### 二、範例
+```
+function outer() {
+  var count = 0;
+  function inner() {
+    count++;
+    return count;
+  }
+  return inner;
+}
+
+var counter = outer();  // outer 執行完畢，執行環境從堆疊移除
+console.log(counter()); // 1
+console.log(counter()); // 2：count 仍然被保存
+console.log(counter()); // 3
+```
+* 原理：依照語法作用域，inner 定義在 outer 內，所以範圍鏈會指向 outer 的變數環境。
+* outer 執行完後，因為 `counter`（也就是 inner）仍參考著 outer 的變數環境，垃圾回收機制判定其仍「可達」，所以 `count` 不會被釋放（參考 1-8）。
+
+每次呼叫 outer 都會產生**新的**閉包環境，彼此互不影響：
+```
+var counterA = outer();
+var counterB = outer();
+console.log(counterA()); // 1
+console.log(counterA()); // 2
+console.log(counterB()); // 1：counterB 有自己的 count
+```
+
+#### 三、經典問題：迴圈與 setTimeout
+```
+for (var i = 0; i < 3; i++) {
+  setTimeout(function () {
+    console.log(i);
+  }, 1000);
+}
+// 結果：3 3 3
+```
+* 原因：var 沒有區塊作用域，三個回呼函式共用同一個全域的 `i`；等到 setTimeout 執行時（非同步），迴圈早已結束，`i` 為 3。
+
+解決方式：
+```
+// 方法 1：使用 IIFE 建立閉包，保存每一次的 i
+for (var i = 0; i < 3; i++) {
+  (function (j) {
+    setTimeout(function () {
+      console.log(j);
+    }, 1000);
+  })(i);
+}
+// 結果：0 1 2
+
+// 方法 2：使用 let，每次迴圈都會產生新的區塊作用域
+for (let i = 0; i < 3; i++) {
+  setTimeout(function () {
+    console.log(i);
+  }, 1000);
+}
+// 結果：0 1 2
+```
+
+#### 四、注意事項
+閉包會讓變數持續存在記憶體中，若大量或不當使用（例如保存大型資料、DOM 節點）可能造成記憶體洩漏；不再需要時可將參考設為 `null`，讓垃圾回收機制釋放。
+
+### 4-5 閉包進階：工廠模式與私有方法
+#### 一、工廠模式（Factory Pattern）
+利用函式「量產」物件，每次呼叫都回傳一個新的物件；搭配閉包，每個物件都擁有自己獨立的狀態。
+```
+function createCounter(initValue) {
+  var count = initValue; // 每次呼叫都會建立新的 count
+  return {
+    increase: function () { return ++count; },
+    decrease: function () { return --count; },
+    getValue: function () { return count; },
+  };
+}
+
+var counter1 = createCounter(0);
+var counter2 = createCounter(100);
+counter1.increase();
+counter1.increase();
+counter2.decrease();
+console.log(counter1.getValue()); // 2
+console.log(counter2.getValue()); // 99
+```
+
+#### 二、私有變數與私有方法
+JavaScript（ES2022 之前）沒有 private 語法，可利用閉包模擬：
+* **私有**：只宣告在外部函式內、不放入回傳物件的變數或函式，外部無法直接存取。
+* **公開**：放在回傳物件中的方法，可存取私有成員，作為與外部溝通的介面。
+```
+function createBankAccount(owner) {
+  // 私有變數
+  var balance = 0;
+  var records = [];
+
+  // 私有方法
+  function log(type, amount) {
+    records.push(type + " " + amount + " 元，餘額 " + balance + " 元");
+  }
+
+  // 公開方法
+  return {
+    deposit: function (amount) {
+      if (amount <= 0) return;
+      balance += amount;
+      log("存入", amount);
+    },
+    withdraw: function (amount) {
+      if (amount > balance) {
+        console.log("餘額不足");
+        return;
+      }
+      balance -= amount;
+      log("提出", amount);
+    },
+    getBalance: function () {
+      return owner + " 的餘額：" + balance;
+    },
+    getRecords: function () {
+      return records.slice(); // 回傳副本，避免外部修改私有陣列
+    },
+  };
+}
+
+var account = createBankAccount("小明");
+account.deposit(1000);
+account.withdraw(300);
+account.withdraw(5000);             // 餘額不足
+console.log(account.getBalance());  // 小明 的餘額：700
+console.log(account.getRecords());  // ['存入 1000 元，餘額 1000 元', '提出 300 元，餘額 700 元']
+
+console.log(account.balance);       // undefined：無法直接存取私有變數
+account.log("存入", 99999);         // TypeError: account.log is not a function
+```
+
+#### 三、模組模式（Module Pattern）
+工廠模式搭配 IIFE，只建立「單一」實例，常用於封裝模組：
+```
+var cart = (function () {
+  var items = []; // 私有
+
+  return {
+    add: function (item) { items.push(item); },
+    count: function () { return items.length; },
+  };
+})();
+
+cart.add("紅茶");
+cart.add("奶茶");
+console.log(cart.count()); // 2
+console.log(cart.items);   // undefined
+```
+
+#### 四、優點
+1. 資料封裝：避免外部任意修改內部狀態，只能透過指定的方法操作。
+2. 避免全域污染：變數不會暴露在全域。
+3. 狀態獨立：每個實例都有自己的閉包環境。
+
+### 4-6 this
+`this` 是函式執行時自動產生的關鍵字，**與函式如何定義、在哪裡定義無關，只與「如何被呼叫」有關**（箭頭函式例外，它沒有自己的 this，會沿用外層的 this）。
+
+#### 一、物件方法調用
+以 `物件.方法()` 的形式呼叫時，`this` 指向「呼叫它的物件」（也就是 `.` 前面的物件）。
+```
+var name = "全域";
+var person = {
+  name: "小明",
+  sayHi: function () {
+    console.log(this.name);
+  },
+  child: {
+    name: "小華",
+    sayHi: function () {
+      console.log(this.name);
+    },
+  },
+};
+
+person.sayHi();        // 小明：this 為 person
+person.child.sayHi();  // 小華：this 為最接近的 person.child
+```
+
+同一個函式，呼叫方式不同，this 就不同：
+```
+function sayHi() {
+  console.log(this.name);
+}
+var a = { name: "A", sayHi: sayHi };
+var b = { name: "B", sayHi: sayHi };
+a.sayHi(); // A
+b.sayHi(); // B
+```
+
+常見陷阱：將方法賦值給變數後再呼叫，會失去原本的物件（變成簡易呼叫）
+```
+var fn = person.sayHi;
+fn(); // 全域：this 變成全域物件（非嚴格模式）
+```
+
+#### 二、簡易呼叫
+直接以 `函式()` 呼叫（Simple Call），前面沒有任何物件：
+* 非嚴格模式：this 指向**全域物件**（瀏覽器為 `window`）。
+* 嚴格模式：this 為 `undefined`。
+* 建議：**簡易呼叫時不要使用 this**。
+```
+var name = "全域";
+function fn() {
+  console.log(this.name);
+}
+fn(); // 全域
+```
+
+常見情況：物件方法內的「內部函式」與「回呼函式」也是簡易呼叫
+```
+var name = "全域";
+var obj = {
+  name: "物件",
+  outer: function () {
+    console.log(this.name);   // 物件
+
+    function inner() {
+      console.log(this.name); // 全域：inner() 是簡易呼叫
+    }
+    inner();
+
+    setTimeout(function () {
+      console.log(this.name); // 全域：回呼函式由 setTimeout 以簡易呼叫方式執行
+    }, 0);
+  },
+};
+obj.outer();
+```
+
+解決方式：
+```
+var obj = {
+  name: "物件",
+  outer: function () {
+    // 方法 1：先將 this 存到變數（常見命名 self、vm、that）
+    var self = this;
+    function inner() {
+      console.log(self.name); // 物件
+    }
+    inner();
+
+    // 方法 2：箭頭函式沒有自己的 this，會沿用外層 outer 的 this
+    setTimeout(() => {
+      console.log(this.name); // 物件
+    }, 0);
+  },
+};
+obj.outer();
+```
+
+#### 三、call, apply, bind與嚴謹模式
+這三個方法都可以**明確指定**函式執行時的 this。
+
+| 方法 | 是否立即執行 | 傳入引數的方式 | 回傳值 |
+| --- | --- | --- | --- |
+| `fn.call(thisArg, a, b)` | 是 | 逐一傳入 | 函式執行結果 |
+| `fn.apply(thisArg, [a, b])` | 是 | 以陣列傳入 | 函式執行結果 |
+| `fn.bind(thisArg, a, b)` | 否 | 逐一傳入（可預先綁定部分引數） | 綁定好 this 的新函式 |
+
+```
+function intro(age, city) {
+  console.log(this.name + "，" + age + " 歲，住在" + city);
+}
+var person = { name: "小明" };
+
+intro.call(person, 18, "台北");       // 小明，18 歲，住在台北
+intro.apply(person, [18, "台北"]);    // 小明，18 歲，住在台北
+
+var bound = intro.bind(person, 18);   // 綁定 this 與第一個參數，不會立即執行
+bound("高雄");                         // 小明，18 歲，住在高雄
+bound.call({ name: "小華" }, "台中");  // 小明，18 歲，住在台中：bind 後的 this 無法再被 call 改變
+```
+
+apply 常見用法：將陣列展開為引數
+```
+var nums = [3, 8, 1];
+console.log(Math.max.apply(null, nums)); // 8
+console.log(Math.max(...nums));          // 8（ES6 展開運算子寫法）
+```
+
+**嚴謹模式（Strict Mode）對 this 的影響**
+
+在檔案或函式開頭加上 `'use strict'` 即可啟用嚴格模式。
+
+| 情況 | 非嚴格模式 | 嚴格模式 |
+| --- | --- | --- |
+| 簡易呼叫 `fn()` | 全域物件（window） | `undefined` |
+| `fn.call(null)` / `fn.call(undefined)` | 全域物件（window） | `null` / `undefined` |
+| `fn.call(1)`（傳入原始型別） | 包裹成物件 `Number {1}` | 維持原始值 `1` |
+
+```
+function normal() {
+  return this;
+}
+function strict() {
+  'use strict';
+  return this;
+}
+
+console.log(normal());              // Window
+console.log(strict());              // undefined
+console.log(normal.call(null));     // Window
+console.log(strict.call(null));     // null
+console.log(typeof normal.call(1)); // "object"
+console.log(typeof strict.call(1)); // "number"
+```
+* 嚴格模式避免 this 意外指向全域物件，防止不小心透過 this 修改到全域變數。
+
+#### 四、DOM
+使用 `addEventListener` 綁定事件時，事件處理函式中的 `this` 指向**綁定事件的 DOM 元素**（等同 `event.currentTarget`）。
+```
+<button id="btn">按鈕</button>
+<script>
+  var btn = document.querySelector("#btn");
+
+  // 一般函式：this 為綁定事件的元素
+  btn.addEventListener("click", function (e) {
+    console.log(this);                     // <button id="btn">按鈕</button>
+    console.log(this === e.currentTarget); // true
+    this.textContent = "已點擊";
+  });
+
+  // 箭頭函式：沒有自己的 this，沿用外層（此處為全域 window）
+  btn.addEventListener("click", (e) => {
+    console.log(this);            // Window
+    console.log(e.currentTarget); // 箭頭函式中改用 e.currentTarget 取得元素
+  });
+</script>
+```
+
+行內事件（HTML 屬性）中的 this：
+```
+<!-- 屬性值中的 this 為該元素 -->
+<button onclick="console.log(this)">按鈕</button>
+
+<!-- 呼叫函式時，函式內部屬於簡易呼叫，this 為 window，需將 this 當作引數傳入 -->
+<button onclick="handle(this)">按鈕</button>
+<script>
+  function handle(el) {
+    console.log(this); // Window
+    console.log(el);   // <button>
+  }
+</script>
+```
+
+物件方法作為事件處理函式時，this 會變成 DOM 元素，需使用 bind 綁定：
+```
+var app = {
+  count: 0,
+  add: function () {
+    this.count++;
+    console.log(this.count);
+  },
+};
+
+btn.addEventListener("click", app.add);           // NaN：this 為 btn，btn.count 為 undefined
+btn.addEventListener("click", app.add.bind(app)); // 1, 2, 3...：this 為 app
+```
+* 注意：`bind` 會產生新函式，若之後需要 `removeEventListener`，必須先將綁定後的函式存到變數中，才能移除同一個函式。
+
+#### 五、this 判斷總結
+| 呼叫方式 | this 指向 |
+| --- | --- |
+| 物件方法調用 `obj.fn()` | obj |
+| 簡易呼叫 `fn()` | 非嚴格模式：全域物件；嚴格模式：undefined |
+| `call` / `apply` / `bind` | 指定的物件 |
+| DOM 事件 `addEventListener` | 綁定事件的元素 |
+| 箭頭函式 | 沒有自己的 this，沿用定義時外層的 this |
+
+
 ## 第五章  繼承與原型鍊
 ## 第六章  物件屬性延伸章節：屬性的特徵
 ## 第七章  ES6 章節：Let 及 Const

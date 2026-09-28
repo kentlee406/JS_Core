@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>物件取值、新增、刪除</title>
+  </head>
+  <body>
+    <script>
+      let obj = {
+        str: "0",
+        num: 1,
+        boo: true,
+        arr: [2, 3],
+        obj: { x: 4, y: 5 },
+        fun: function () {
+          return 6;
+        },
+        und: undefined,
+        nul: null,
+        "a-b": 7,
+        8: 8,
+        "a b": 9,
+        _ab: 10,
+        $ab: 11,
+      };
+      // 請使用括弧記法或點記法取出以下值
+      // "0"
+      console.log(0, obj.str);
+      console.log(0, obj["str"]);
+      // 1
+      console.log(1, obj.num);
+      console.log(1, obj["num"]);
+      // 2
+      console.log(2, obj.arr[0]);
+      console.log(2, obj["arr"][0]);
+      // 3
+      console.log(3, obj.arr[1]);
+      console.log(3, obj["arr"][1]);
+      // 4
+      console.log(4, obj.obj.x);
+      console.log(4, obj["obj"]["x"]);
+      // 5
+      console.log(5, obj.obj.y);
+      console.log(5, obj["obj"]["y"]);
+      // 6
+      console.log(6, obj.fun());
+      console.log(6, obj["fun"]());
+      // 7
+      console.log(7, obj["a-b"]);
+      // 8
+      console.log(8, obj[8]);
+      // 9
+      console.log(9, obj["a b"]);
+      // 10
+      console.log(10, obj._ab);
+      console.log(10, obj["_ab"]);
+      // 11
+      console.log(11, obj.$ab);
+      console.log(11, obj["$ab"]);
+      // null
+      console.log(null, obj.nul);
+      // undefined
+      console.log(undefined, obj.und);
+      console.log(undefined, obj["und"]);
+      // true
+      console.log(true, obj.boo);
+      console.log(true, obj["boo"]);
+
+      // 新增屬性add並賦予值12
+      obj.add = 12;
+      console.log(12, obj.add);
+
+      // 刪除屬性add
+      delete obj.add;
+      console.log(12, obj.add);
+    </script>
+  </body>
+</html>
