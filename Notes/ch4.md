@@ -1,0 +1,826 @@
+## 第四章  函式以及 This 的運作
+### 4-1 什麼是函式
+函式（Function）是一段「可重複呼叫」的程式碼區塊。在 JavaScript 中，函式本身也是一種**物件**（可呼叫的物件，callable object），因此可以擁有屬性、被賦值給變數、當作參數傳遞，也可以當作回傳值（一級函式，First-class Function）。
+
+#### 一、函式的基本架構
+```
+function 函式名稱(參數1, 參數2) {  // 1. function 關鍵字 2. 名稱 3. 參數
+  // 4. 函式本體（程式碼區塊）
+  return 回傳值;                    // 5. 回傳值（沒寫 return 時預設回傳 undefined）
+}
+函式名稱(引數1, 引數2);              // 6. 呼叫（呼叫時才會建立函式執行環境）
+```
+
+範例：請說明執行結構與原理
+```
+function a(x){
+  let y=1;
+  return [this, x, y];
+}
+let result=a(3);
+console.log(result);
+```
+
+執行結果（瀏覽器、非嚴格模式）：`[Window, 3, 1]`
+
+執行原理說明：
+1. **全域執行環境 — 創造階段**
+   * 函式陳述式 `a` 會被完整提升（函式本體一起存入記憶體）。
+   * `result` 以 let 宣告，也會提升但處於暫時性死區（TDZ），尚未初始化。
+2. **全域執行環境 — 執行階段**
+   * 執行到 `a(3)` 時，建立**函式執行環境**並推入執行堆疊（Call Stack）。
+3. **函式執行環境 — 創造階段**，會準備以下內容：
+   * `arguments`：類陣列物件 `{0: 3, length: 1}`。
+   * 參數 `x`：直接被賦值為引數 `3`。
+   * 區域變數 `y`：let 宣告，處於 TDZ。
+   * `this`：由「呼叫方式」決定，`a(3)` 屬於簡易呼叫，非嚴格模式下指向全域物件（瀏覽器為 `window`）。
+   * 外部環境參考（範圍鏈）：a 定義在全域，所以外層為全域環境。
+4. **函式執行環境 — 執行階段**
+   * `y=1` 完成初始化，接著 `return [this, x, y]` 回傳陣列。
+5. **結束**
+   * 函式執行環境從執行堆疊中移除，回傳值賦予 `result`，最後印出 `[Window, 3, 1]`。
+   * 若在嚴格模式（`'use strict'`）下執行，`this` 為 `undefined`，結果為 `[undefined, 3, 1]`。
+
+補充：函式是物件，因此擁有屬性
+```
+function a(x, y){}
+console.log(a.name);    // "a"：函式名稱
+console.log(a.length);  // 2：定義的參數數量
+a.note = "自訂屬性";     // 可以像物件一樣新增屬性
+console.log(typeof a);  // "function"
+```
+
+#### 二、函式陳述式(具名函式)與函式表達式(匿名函式)的差異
+```
+// 函式陳述式（Function Declaration）
+function fn1() { return 1; }
+
+// 函式表達式（Function Expression）：將函式當作「值」賦予變數
+var fn2 = function () { return 2; };
+```
+是否有兩者同時混用的情形？
+
+  有，稱為**具名函式表達式（Named Function Expression, NFE）**：外觀像函式陳述式，但因為出現在賦值運算子右側，所以仍是「函式表達式」。
+```
+var fn = function inner(n) {
+  console.log(typeof inner); // "function"：函式名稱只能在函式內部使用
+  return n <= 1 ? 1 : n * inner(n - 1); // 常用於遞迴
+};
+
+console.log(fn(5));         // 120
+console.log(typeof inner);  // "undefined"：外部無法存取 inner
+inner(5);                   // ReferenceError: inner is not defined
+```
+* 函式名稱 `inner` 只存在於函式自己的作用域，不會污染外部，也不會被提升。
+* 優點：遞迴時不依賴外部變數名稱（即使 `fn` 被重新賦值也不影響）、除錯時錯誤堆疊會顯示函式名稱，比匿名函式更好追蹤。
+
+此外，匿名函式可以直接當作「引數」傳入另一個函式（回呼函式 Callback）
+```
+function c(fn){
+  fn();
+}
+
+c(function(){console.log(1);})
+```
+
+  執行結果：`1`
+
+  執行原理說明：
+   1. 函式陳述式 `c` 在創造階段被完整提升，它接收一個參數 `fn`。
+   2. 呼叫 `c(...)` 時，括號內的 `function(){console.log(1);}` 是一個**匿名函式表達式**：它不是陳述式，而是被當作「值」直接傳入，不需要先存到變數中。
+   3. 進入 `c` 的函式執行環境後，參數 `fn` 被賦值為這個匿名函式（傳遞的是函式物件的參考）。
+   4. 執行 `fn()` 時，才真正呼叫該匿名函式，建立它的執行環境並印出 `1`。
+   * 這種「被當作引數傳入、由其他函式在適當時機呼叫」的函式稱為**回呼函式（Callback Function）**。
+   * 之所以可行，是因為 JavaScript 的函式是**一級函式（First-class Function）**：函式是物件，可以像一般值一樣被賦值給變數、當作引數傳遞、或作為回傳值。
+   * 常見應用：`setTimeout(function(){...}, 1000)`、`arr.forEach(function(item){...})`、`btn.addEventListener('click', function(){...})`。
+   * 等同於以下寫法，只是省去了額外的變數名稱：
+```
+var fn2 = function(){ console.log(1); };
+c(fn2); // 1
+```
+
+### 4-2 立即函式
+立即函式（IIFE, Immediately Invoked Function Expression）：又稱為Self-Executing Anonymous Function，定義完成後**立刻執行**的函式表達式。
+
+#### 一、基本語法
+```
+(function () {
+  console.log("立即執行");
+})();
+
+// 另一種寫法，效果相同
+(function () {
+  console.log("立即執行");
+}());
+
+// 傳入參數與取得回傳值
+var result = (function (a, b) {
+  return a + b;
+})(1, 2);
+console.log(result); // 3
+```
+* 外層的 `()` 讓 JavaScript 將 function 視為「表達式」而非「陳述式」，才能在後面加上 `()` 立即呼叫。
+* 直接寫 `function(){}()` 會出現 SyntaxError，因為以 function 開頭會被解析為函式陳述式。
+
+#### 二、用途
+1. **建立獨立作用域，避免污染全域**
+```
+(function () {
+  var count = 0; // 只存在於 IIFE 內部
+})();
+console.log(typeof count); // "undefined"
+```
+2. **搭配閉包保存私有變數**（模組模式，詳見 4-5）
+```
+var counter = (function () {
+  var count = 0;
+  return function () {
+    return ++count;
+  };
+})();
+console.log(counter()); // 1
+console.log(counter()); // 2
+```
+3. **將外部變數傳入，產生當下的副本**
+```
+var a = 1;
+(function (a) {
+  a = 2;          // 修改的是參數 a（區域變數）
+  console.log(a); // 2
+})(a);
+console.log(a);   // 1
+```
+4. **傳入同一個物件，讓多個 IIFE 共同擴充（跨作用域共享資料）**
+```
+var a = {};
+(function (b) { b.x = 1; })(a);
+(function (c) { c.y = 2; })(a);
+console.log(a); // { x: 1, y: 2 }
+```
+* 與第 3 點不同：傳入的是**物件**，參數 `b`、`c` 拿到的是同一個物件的參考（Call by Sharing，參考 3-7），因此在 IIFE 內新增屬性會反映到外部的 `a`。
+* 兩個 IIFE 各自擁有獨立作用域，參數名稱（`b`、`c`）互不影響，卻能透過同一個物件交換、累加資料。
+* 常見應用：將程式拆成多個檔案或區塊，各自用 IIFE 包起來，並對同一個命名空間物件掛上功能，例如 `(function (app) { app.util = ...; })(window.app = window.app || {});`，既不污染全域，又能組合出完整模組。
+* 注意：若在 IIFE 內**重新賦值**參數（如 `b = { x: 1 }`），只會改變參數指向，外部的 `a` 不受影響。
+
+5. **傳入全域物件，有意識地對外公開變數**
+```
+(function (global) { global.x = 1; })(window);
+console.log(window.x); // 1
+console.log(x);        // 1（瀏覽器中，window 的屬性即全域變數）
+```
+* 執行過程：
+   1. 外層 `()` 將 function 轉為函式表達式，後方 `(window)` 立即呼叫它，並把 `window` 當作引數傳入。
+   2. 進入函式執行環境後，參數 `global` 拿到 `window` 物件的參考（Call by Sharing，同第 4 點）。
+   3. `global.x = 1` 等同於 `window.x = 1`，因此在全域新增了屬性 `x`。
+* 為什麼不直接寫 `window.x = 1`？
+   1. **明確標示對外出口**：IIFE 內部的變數預設都是私有的，只有透過 `global.xxx` 掛上去的才會公開，一眼就能看出模組「輸出了什麼」，避免不小心漏寫 `var` 造成意外的全域變數（參考 1-8）。
+   2. **不綁定特定執行環境**：函式內部只認得參數 `global`，不認得 `window`。瀏覽器傳 `window`、Node.js 傳 `global`、Web Worker 傳 `self`（現代可統一用 `globalThis`），同一段程式碼就能在不同環境運作。
+   3. **查找較快、利於壓縮**：`global` 是區域變數，在範圍鏈（參考 1-5）第一層就能找到；壓縮工具也能把參數名稱縮短成 `e` 之類的單一字母，但無法改名 `window`。
+* 與第 4 點的關係：兩者原理相同（都是傳入物件並擴充屬性），差別只在傳入的是自己建立的命名空間物件，還是全域物件本身。
+
+**實際案例：Vue 的打包檔**
+
+Vue 透過 `<script>` 標籤直接引入時所使用的打包檔，正是用 IIFE 包住整個框架，只對外公開一個 `Vue` 變數。
+
+Vue 2（`vue.js`，UMD 格式，已調整排版並加上註解）：
+```
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined'
+    ? module.exports = factory()                 // CommonJS（Node.js / webpack）
+    : typeof define === 'function' && define.amd
+      ? define(factory)                          // AMD（RequireJS）
+      : (global = global || self, global.Vue = factory()); // 瀏覽器：掛到全域
+}(this, function () {
+  'use strict';
+  // ……整個 Vue 框架的原始碼（數千行，全部是私有變數）……
+  return Vue;
+}));
+```
+* 傳入兩個引數：`this`（在瀏覽器全域中即 `window`）作為 `global`，以及一個會回傳 `Vue` 的工廠函式 `factory`。
+* IIFE 內先判斷目前的模組環境，決定要用哪種方式輸出；在一般瀏覽器中走到最後一行 `global.Vue = factory()`，原理就和 `global.x = 1` 完全一樣。
+* `global || self` 是短路評估（參考 2-9），若 `this` 取不到值（如嚴格模式或 Worker 環境）就改用 `self`。
+* 結果：框架內部的上千個函式、變數都被封裝在 `factory` 的作用域中，全域只多了一個 `window.Vue`。
+
+Vue 3（`vue.global.js`）：
+```
+var Vue = (function (exports) {
+  'use strict';
+  // ……框架原始碼……
+  exports.createApp = createApp;
+  exports.ref = ref;
+  // ……
+  return exports;
+})({});
+```
+* 傳入一個空物件 `{}` 作為 `exports`，在 IIFE 內逐一掛上要公開的 API，最後回傳並指派給全域變數 `Vue`，屬於第 2 點（回傳值）與第 4 點（擴充傳入物件）的組合。
+* 使用時即可 `const { createApp, ref } = Vue;`。
+* 補充：現代專案多改用 ES Module（`import { createApp } from 'vue'`），模組本身就有獨立作用域，不再需要 IIFE；但為了支援直接用 `<script>` 引入，函式庫仍會提供 IIFE / UMD 版本的打包檔（jQuery、Lodash 等也是同樣手法）。
+
+#### 三、注意事項
+上一行沒有分號時，IIFE 開頭的 `(` 會被當成「呼叫」上一行的結果（參考 2-2 ASI），因此常見在 IIFE 前面加上分號：
+```
+var a = 1
+;(function () { console.log(a); })()
+```
+
+還有，IIFE無法在函式外執行：
+```
+(function IIFE(){console.log(1);}());
+IIFE();  // Uncaught ReferenceError: IIFE is not defined
+```
+
+
+### 4-3 參數
+#### 一、參數（Parameter）與引數（Argument）
+* 參數：定義函式時括號內的變數名稱，屬於函式的區域變數。
+* 引數：呼叫函式時實際傳入的值。
+```
+function add(a, b) {  // a, b 為參數
+  return a + b;
+}
+add(1, 2);            // 1, 2 為引數
+```
+
+參數在函式執行環境的**創造階段**就會被賦值，並與函式內的提升互相影響：
+```
+function c(a){
+  console.log(a);
+
+  function a(){}
+
+  var a;
+  console.log(a);
+
+  a=2;
+  console.log(a);
+}
+c(1)
+```
+
+  執行結果：
+```
+ƒ a(){}
+ƒ a(){}
+2
+```
+
+  執行原理說明：
+   1. **創造階段**依序處理：
+      * 參數 `a` 先被賦值為引數 `1`。
+      * 函式陳述式 `function a(){}` 被完整提升，覆蓋同名的參數，`a` 變成函式。
+      * `var a` 發現 `a` 已存在，宣告直接被忽略，**不會**把 `a` 重設為 `undefined`（參考 1-6 提升的優先順序）。
+   2. **執行階段**：
+      * 第一個 `console.log(a)` 印出函式 `ƒ a(){}`。
+      * `function a(){}` 與 `var a;` 已在創造階段處理完畢，執行到這兩行時不會有任何作用，第二個 `console.log(a)` 仍是函式。
+      * `a=2` 才真正重新賦值，第三個 `console.log(a)` 印出 `2`。
+   * 結論：同名時的優先順序為「函式陳述式 > 參數 > var 宣告（無賦值）」；而執行階段的賦值會再覆蓋掉所有結果。
+
+#### 二、引數數量不一致
+JavaScript 不會檢查引數數量：
+```
+function fn(a, b) {
+  console.log(a, b);
+}
+fn(1);        // 1 undefined：未傳入的參數為 undefined
+fn(1, 2, 3);  // 1 2：多傳入的引數會被忽略（但可透過 arguments 取得）
+```
+
+引數是依照**位置順序**對應到參數，與外部變數的名稱無關：
+```
+function d(d, c, b, a){
+  console.log(d, c, b, a);
+}
+let a=1, b=2, c=3;
+d(a, b, c);
+```
+
+  執行結果：`1 2 3 undefined`
+
+  執行原理說明：
+   1. 呼叫 `d(a, b, c)` 時，先在全域取出 `a`、`b`、`c` 的值，實際傳入的是 `1, 2, 3`。
+   2. 引數依位置賦值給參數：第 1 個參數 `d` = 1、第 2 個參數 `c` = 2、第 3 個參數 `b` = 3；第 4 個參數 `a` 沒有對應的引數，因此為 `undefined`。
+   * 參數是函式的**區域變數**，即使名稱和外部的 `a`、`b`、`c` 相同，也是各自獨立的變數，並會遮蔽（shadowing）外部同名變數。
+   * 參數 `d` 與函式名稱 `d` 同名，在函式內部 `d` 指的是參數（值為 1），而非函式本身。
+   * 實務上應避免這種容易混淆的命名方式。
+
+#### 三、arguments 物件
+* 每個一般函式執行時都會自動建立 `arguments`，內含所有傳入的引數。
+* 它是**類陣列（Array-like）**：有索引與 length，但沒有陣列方法（如 map、forEach）。
+* 箭頭函式沒有自己的 arguments。
+```
+function sum() {
+  console.log(arguments);        // [Arguments] { '0': 1, '1': 2, '2': 3 }
+  console.log(arguments.length); // 3
+  return Array.from(arguments).reduce((total, n) => total + n, 0); // 轉為陣列才能使用陣列方法
+}
+console.log(sum(1, 2, 3)); // 6
+```
+
+範例：函式內可同時取得區域變數、全域變數、參數、arguments 與 this
+```
+var G=1;
+var obj={
+ a: function(b){
+   var L=2;
+   console.log(L, G, b, arguments, this);
+ }
+}
+obj.a(9,8,7);
+
+// arguments是類陣列，不能直接使用陣列方法，如forEach()
+```
+
+  執行結果：`2 1 9 Arguments(3) [9, 8, 7] {a: ƒ}`
+
+  執行原理說明：
+   1. `L`：函式內的區域變數，值為 `2`。
+   2. `G`：函式內找不到，沿著範圍鏈（參考 1-5）往外到全域找到 `G = 1`。
+   3. `b`：參數只有一個，因此只接收第一個引數 `9`，多傳入的 `8`、`7` 不會對應到任何參數。
+   4. `arguments`：包含**所有**傳入的引數 `[9, 8, 7]`，即使沒有對應的參數也能取得（`arguments[1]` 為 8、`arguments[2]` 為 7）。
+   5. `this`：以 `obj.a()` 的方式呼叫（物件方法調用，參考 4-6），`this` 指向 `obj`。
+   * `arguments` 是類陣列，直接呼叫 `arguments.forEach()` 會出現 TypeError；需先用 `Array.from(arguments)` 或 `[...arguments]` 轉為陣列。
+
+#### 四、ES6 預設參數與其餘參數
+```
+// 預設參數：未傳入或傳入 undefined 時才會使用預設值
+function greet(name = "訪客") {
+  return "Hello " + name;
+}
+console.log(greet());          // Hello 訪客
+console.log(greet(undefined)); // Hello 訪客
+console.log(greet(null));      // Hello null：null 不會觸發預設值
+
+// 其餘參數（Rest Parameters）：將剩餘引數收集成「真正的陣列」，必須放在最後一個
+function sum(first, ...others) {
+  console.log(first, others); // 1 [2, 3, 4]
+  return others.reduce((total, n) => total + n, first);
+}
+console.log(sum(1, 2, 3, 4)); // 10
+```
+
+#### 五、傳值與傳參考
+參數的行為與變數賦值相同（參考第三章）：
+* 原始型別：傳入值的**副本**，函式內修改不影響外部。
+* 物件型別：傳入**參考**，修改物件屬性會影響外部；但將參數重新賦值為新物件則不影響外部。
+```
+function change(num, obj1, obj2) {
+  num = 100;             // 修改副本
+  obj1.value = 100;      // 透過參考修改原物件
+  obj2 = { value: 100 }; // 參數指向新物件，與外部斷開
+}
+var n = 1, o1 = { value: 1 }, o2 = { value: 1 };
+change(n, o1, o2);
+console.log(n, o1.value, o2.value); // 1 100 1
+```
+
+範例：
+```
+function e(obj){obj.x=2;}
+var obj={x:1}
+e(obj);
+console.log(obj);
+```
+
+  執行結果：`{x: 2}`
+
+  執行原理說明：
+   1. 呼叫 `e(obj)` 時，將全域 `obj` 存放的物件參考**複製一份**給參數 `obj`（Call by Sharing，參考 3-7）。
+   2. 參數 `obj` 雖然與全域 `obj` 同名，但它是 `e` 的區域變數；兩者指向**同一個物件**。
+   3. `obj.x=2` 修改的是該物件的屬性，因此外部的 `obj` 也看得到變化。
+   * 若改寫為 `function e(obj){ obj = {x:2}; }`，只是讓參數指向新物件，外部 `obj` 仍為 `{x: 1}`。
+
+#### 六、函式作為參數（回呼函式 Callback）
+函式是一級物件，因此可以作為參數傳入另一個函式，稍後再被呼叫：
+```
+function calculate(a, b, operation) {
+  return operation(a, b);
+}
+console.log(calculate(2, 3, function (x, y) { return x * y; })); // 6
+console.log(calculate(2, 3, (x, y) => x + y));                    // 5
+```
+
+範例：傳入匿名函式與傳入具名函式
+```
+function CS(x){console.log(x);}
+function functionB(fn){fn(1);}
+functionB(function(a){console.log(a);})
+functionB(CS);
+```
+
+  執行結果：
+```
+1
+1
+```
+
+  執行原理說明：
+   1. `functionB` 接收參數 `fn`，並在內部以 `fn(1)` 呼叫它，把 `1` 當作引數傳給回呼函式。
+   2. 第一次呼叫：傳入**匿名函式表達式**，`fn` 指向該匿名函式，執行 `fn(1)` 時參數 `a` = 1，印出 `1`。
+   3. 第二次呼叫：傳入**具名函式** `CS`，注意寫的是 `CS` 而不是 `CS()`：
+      * `CS`：傳入函式本身（函式物件的參考），由 `functionB` 決定何時呼叫。
+      * `CS()`：會先立即執行 `CS`，再把它的回傳值 `undefined` 傳入，導致 `fn(1)` 出現 TypeError: fn is not a function。
+   4. `fn` 指向 `CS`，執行 `fn(1)` 等同於 `CS(1)`，參數 `x` = 1，印出 `1`。
+   * 回呼函式的參數值由「呼叫它的函式」決定（這裡是 `functionB` 傳入的 `1`），而不是由定義回呼函式的地方決定。
+
+### 4-4 閉包
+#### 一、定義
+閉包（Closure）：**函式與其定義時所在的語法環境（Lexical Environment）的組合**。
+當內部函式被回傳或傳到外部使用時，即使外部函式已經執行完畢，內部函式仍然可以存取外部函式的變數。
+
+形成閉包的條件：
+1. 函式內部有另一個函式。
+2. 內部函式使用了外部函式的變數。
+3. 內部函式在外部函式之外被使用（例如被 return 出去）。
+
+#### 二、範例
+```
+function storeMoney(){
+  var money = 1000;
+  return function(price){
+    money+=price
+    return money;
+  }
+}
+console.log(storeMoney()(100));
+
+var MingMoney=storeMoney();
+console.log(MingMoney(100));
+console.log(MingMoney(100));
+console.log(MingMoney(100));
+
+
+var JayMoney=storeMoney();
+console.log(JayMoney(150));
+console.log(JayMoney(150));
+console.log(JayMoney(150));
+```
+
+  執行結果：
+```
+1100
+1100
+1200
+1300
+1150
+1300
+1450
+```
+
+  執行原理說明：
+   1. `storeMoney` 內宣告區域變數 `money = 1000`，並 **return 一個匿名函式**；該匿名函式使用了外部的 `money`，符合形成閉包的三個條件。
+   2. `storeMoney()(100)`：
+      * `storeMoney()` 先執行，回傳內部匿名函式；緊接著的 `(100)` 立即呼叫它，`price` = 100。
+      * `money` 由 1000 變成 1100，印出 `1100`。
+      * 回傳的函式沒有被任何變數保存，執行完後無法再被存取，這個 `money` 會被垃圾回收機制釋放（參考 1-8）。
+   3. `var MingMoney=storeMoney()`：
+      * 再次呼叫 `storeMoney`，建立一個**全新的**執行環境，其中的 `money` 重新從 1000 開始（與步驟 2 的 `money` 無關）。
+      * `storeMoney` 執行完畢，執行環境從堆疊移除；但 `MingMoney` 保存了內部函式，而內部函式依照語法作用域，範圍鏈指向 `storeMoney` 的變數環境，垃圾回收機制判定其仍「可達」，所以 `money` 不會被釋放。
+   4. 連續呼叫 `MingMoney(100)` 三次，每次都修改**同一個**被保存的 `money`：1000 → `1100` → `1200` → `1300`，數值會累加。
+   5. `var JayMoney=storeMoney()`：又建立一個新的閉包環境，擁有**自己的** `money`（從 1000 開始），連續呼叫 `JayMoney(150)`：1000 → `1150` → `1300` → `1450`。
+   * 重點：每呼叫一次 `storeMoney()` 就產生一份獨立的 `money`，`MingMoney` 與 `JayMoney` 各自保存自己的狀態、彼此互不影響，像是兩個人各自的錢包。
+   * `money` 只能透過回傳的函式修改，外部無法直接讀寫（例如 `MingMoney.money` 為 `undefined`），達到保護變數的效果（私有變數的應用參考 4-5）。
+
+#### 三、經典問題：迴圈與 setTimeout
+```
+for (var i = 0; i < 3; i++) {
+  setTimeout(function () {
+    console.log(i);
+  }, 1000);
+}
+// 結果：3 3 3
+```
+* 原因：var 沒有區塊作用域，三個回呼函式共用同一個全域的 `i`；等到 setTimeout 執行時（非同步），迴圈早已結束，`i` 為 3。
+
+解決方式：
+```
+// 方法 1：使用 IIFE 建立閉包，保存每一次的 i
+for (var i = 0; i < 3; i++) {
+  (function (j) {
+    setTimeout(function () {
+      console.log(j);
+    }, 1000);
+  })(i);
+}
+// 結果：0 1 2
+
+// 方法 2：使用 let，每次迴圈都會產生新的區塊作用域
+for (let i = 0; i < 3; i++) {
+  setTimeout(function () {
+    console.log(i);
+  }, 1000);
+}
+// 結果：0 1 2
+```
+
+#### 四、注意事項
+閉包會讓變數持續存在記憶體中，若大量或不當使用（例如保存大型資料、DOM 節點）可能造成記憶體洩漏；不再需要時可將參考設為 `null`，讓垃圾回收機制釋放。
+
+### 4-5 閉包進階：工廠模式與私有方法
+#### 一、工廠模式（Factory Pattern）
+利用函式「量產」物件，每次呼叫都回傳一個新的物件；搭配閉包，每個物件都擁有自己獨立的狀態。
+```
+function createCounter(initValue) {
+  var count = initValue; // 每次呼叫都會建立新的 count
+  return {
+    increase: function () { return ++count; },
+    decrease: function () { return --count; },
+    getValue: function () { return count; },
+  };
+}
+
+var counter1 = createCounter(0);
+var counter2 = createCounter(100);
+counter1.increase();
+counter1.increase();
+counter2.decrease();
+console.log(counter1.getValue()); // 2
+console.log(counter2.getValue()); // 99
+```
+
+#### 二、私有變數與私有方法
+JavaScript（ES2022 之前）沒有 private 語法，可利用閉包模擬：
+* **私有**：只宣告在外部函式內、不放入回傳物件的變數或函式，外部無法直接存取。
+* **公開**：放在回傳物件中的方法，可存取私有成員，作為與外部溝通的介面。
+```
+function createBankAccount(owner) {
+  // 私有變數
+  var balance = 0;
+  var records = [];
+
+  // 私有方法
+  function log(type, amount) {
+    records.push(type + " " + amount + " 元，餘額 " + balance + " 元");
+  }
+
+  // 公開方法
+  return {
+    deposit: function (amount) {
+      if (amount <= 0) return;
+      balance += amount;
+      log("存入", amount);
+    },
+    withdraw: function (amount) {
+      if (amount > balance) {
+        console.log("餘額不足");
+        return;
+      }
+      balance -= amount;
+      log("提出", amount);
+    },
+    getBalance: function () {
+      return owner + " 的餘額：" + balance;
+    },
+    getRecords: function () {
+      return records.slice(); // 回傳副本，避免外部修改私有陣列
+    },
+  };
+}
+
+var account = createBankAccount("小明");
+account.deposit(1000);
+account.withdraw(300);
+account.withdraw(5000);             // 餘額不足
+console.log(account.getBalance());  // 小明 的餘額：700
+console.log(account.getRecords());  // ['存入 1000 元，餘額 1000 元', '提出 300 元，餘額 700 元']
+
+console.log(account.balance);       // undefined：無法直接存取私有變數
+account.log("存入", 99999);         // TypeError: account.log is not a function
+```
+
+#### 三、模組模式（Module Pattern）
+工廠模式搭配 IIFE，只建立「單一」實例，常用於封裝模組：
+```
+var cart = (function () {
+  var items = []; // 私有
+
+  return {
+    add: function (item) { items.push(item); },
+    count: function () { return items.length; },
+  };
+})();
+
+cart.add("紅茶");
+cart.add("奶茶");
+console.log(cart.count()); // 2
+console.log(cart.items);   // undefined
+```
+
+#### 四、優點
+1. 資料封裝：避免外部任意修改內部狀態，只能透過指定的方法操作。
+2. 避免全域污染：變數不會暴露在全域。
+3. 狀態獨立：每個實例都有自己的閉包環境。
+
+### 4-6 this
+`this` 是函式執行時自動產生的關鍵字，**與函式如何定義、在哪裡定義無關，只與「如何被呼叫」有關**（箭頭函式例外，它沒有自己的 this，會沿用外層的 this）。
+
+#### 一、物件方法調用
+以 `物件.方法()` 的形式呼叫時，`this` 指向「呼叫它的物件」（也就是 `.` 前面的物件）。
+```
+var name = "全域";
+var person = {
+  name: "小明",
+  sayHi: function () {
+    console.log(this.name);
+  },
+  child: {
+    name: "小華",
+    sayHi: function () {
+      console.log(this.name);
+    },
+  },
+};
+
+person.sayHi();        // 小明：this 為 person
+person.child.sayHi();  // 小華：this 為最接近的 person.child
+```
+
+同一個函式，呼叫方式不同，this 就不同：
+```
+function sayHi() {
+  console.log(this.name);
+}
+var a = { name: "A", sayHi: sayHi };
+var b = { name: "B", sayHi: sayHi };
+a.sayHi(); // A
+b.sayHi(); // B
+```
+
+常見陷阱：將方法賦值給變數後再呼叫，會失去原本的物件（變成簡易呼叫）
+```
+var fn = person.sayHi;
+fn(); // 全域：this 變成全域物件（非嚴格模式）
+```
+
+#### 二、簡易呼叫
+直接以 `函式()` 呼叫（Simple Call），前面沒有任何物件：
+* 非嚴格模式：this 指向**全域物件**（瀏覽器為 `window`）。
+* 嚴格模式：this 為 `undefined`。
+* 建議：**簡易呼叫時不要使用 this**。
+```
+var name = "全域";
+function fn() {
+  console.log(this.name);
+}
+fn(); // 全域
+```
+
+常見情況：物件方法內的「內部函式」與「回呼函式」也是簡易呼叫
+```
+var name = "全域";
+var obj = {
+  name: "物件",
+  outer: function () {
+    console.log(this.name);   // 物件
+
+    function inner() {
+      console.log(this.name); // 全域：inner() 是簡易呼叫
+    }
+    inner();
+
+    setTimeout(function () {
+      console.log(this.name); // 全域：回呼函式由 setTimeout 以簡易呼叫方式執行
+    }, 0);
+  },
+};
+obj.outer();
+```
+
+解決方式：
+```
+var obj = {
+  name: "物件",
+  outer: function () {
+    // 方法 1：先將 this 存到變數（常見命名 self、vm、that）
+    var self = this;
+    function inner() {
+      console.log(self.name); // 物件
+    }
+    inner();
+
+    // 方法 2：箭頭函式沒有自己的 this，會沿用外層 outer 的 this
+    setTimeout(() => {
+      console.log(this.name); // 物件
+    }, 0);
+  },
+};
+obj.outer();
+```
+
+#### 三、call, apply, bind與嚴謹模式
+這三個方法都可以**明確指定**函式執行時的 this。
+
+| 方法 | 是否立即執行 | 傳入引數的方式 | 回傳值 |
+| --- | --- | --- | --- |
+| `fn.call(thisArg, a, b)` | 是 | 逐一傳入 | 函式執行結果 |
+| `fn.apply(thisArg, [a, b])` | 是 | 以陣列傳入 | 函式執行結果 |
+| `fn.bind(thisArg, a, b)` | 否 | 逐一傳入（可預先綁定部分引數） | 綁定好 this 的新函式 |
+
+```
+function intro(age, city) {
+  console.log(this.name + "，" + age + " 歲，住在" + city);
+}
+var person = { name: "小明" };
+
+intro.call(person, 18, "台北");       // 小明，18 歲，住在台北
+intro.apply(person, [18, "台北"]);    // 小明，18 歲，住在台北
+
+var bound = intro.bind(person, 18);   // 綁定 this 與第一個參數，不會立即執行
+bound("高雄");                         // 小明，18 歲，住在高雄
+bound.call({ name: "小華" }, "台中");  // 小明，18 歲，住在台中：bind 後的 this 無法再被 call 改變
+```
+
+apply 常見用法：將陣列展開為引數
+```
+var nums = [3, 8, 1];
+console.log(Math.max.apply(null, nums)); // 8
+console.log(Math.max(...nums));          // 8（ES6 展開運算子寫法）
+```
+
+**嚴謹模式（Strict Mode）對 this 的影響**
+
+在檔案或函式開頭加上 `'use strict'` 即可啟用嚴格模式。
+
+| 情況 | 非嚴格模式 | 嚴格模式 |
+| --- | --- | --- |
+| 簡易呼叫 `fn()` | 全域物件（window） | `undefined` |
+| `fn.call(null)` / `fn.call(undefined)` | 全域物件（window） | `null` / `undefined` |
+| `fn.call(1)`（傳入原始型別） | 包裹成物件 `Number {1}` | 維持原始值 `1` |
+
+```
+function normal() {
+  return this;
+}
+function strict() {
+  'use strict';
+  return this;
+}
+
+console.log(normal());              // Window
+console.log(strict());              // undefined
+console.log(normal.call(null));     // Window
+console.log(strict.call(null));     // null
+console.log(typeof normal.call(1)); // "object"
+console.log(typeof strict.call(1)); // "number"
+```
+* 嚴格模式避免 this 意外指向全域物件，防止不小心透過 this 修改到全域變數。
+
+#### 四、DOM
+使用 `addEventListener` 綁定事件時，事件處理函式中的 `this` 指向**綁定事件的 DOM 元素**（等同 `event.currentTarget`）。
+```
+<button id="btn">按鈕</button>
+<script>
+  var btn = document.querySelector("#btn");
+
+  // 一般函式：this 為綁定事件的元素
+  btn.addEventListener("click", function (e) {
+    console.log(this);                     // <button id="btn">按鈕</button>
+    console.log(this === e.currentTarget); // true
+    this.textContent = "已點擊";
+  });
+
+  // 箭頭函式：沒有自己的 this，沿用外層（此處為全域 window）
+  btn.addEventListener("click", (e) => {
+    console.log(this);            // Window
+    console.log(e.currentTarget); // 箭頭函式中改用 e.currentTarget 取得元素
+  });
+</script>
+```
+
+行內事件（HTML 屬性）中的 this：
+```
+<!-- 屬性值中的 this 為該元素 -->
+<button onclick="console.log(this)">按鈕</button>
+
+<!-- 呼叫函式時，函式內部屬於簡易呼叫，this 為 window，需將 this 當作引數傳入 -->
+<button onclick="handle(this)">按鈕</button>
+<script>
+  function handle(el) {
+    console.log(this); // Window
+    console.log(el);   // <button>
+  }
+</script>
+```
+
+物件方法作為事件處理函式時，this 會變成 DOM 元素，需使用 bind 綁定：
+```
+var app = {
+  count: 0,
+  add: function () {
+    this.count++;
+    console.log(this.count);
+  },
+};
+
+btn.addEventListener("click", app.add);           // NaN：this 為 btn，btn.count 為 undefined
+btn.addEventListener("click", app.add.bind(app)); // 1, 2, 3...：this 為 app
+```
+* 注意：`bind` 會產生新函式，若之後需要 `removeEventListener`，必須先將綁定後的函式存到變數中，才能移除同一個函式。
+
+#### 五、this 判斷總結
+| 呼叫方式 | this 指向 |
+| --- | --- |
+| 物件方法調用 `obj.fn()` | obj |
+| 簡易呼叫 `fn()` | 非嚴格模式：全域物件；嚴格模式：undefined |
+| `call` / `apply` / `bind` | 指定的物件 |
+| DOM 事件 `addEventListener` | 綁定事件的元素 |
+| 箭頭函式 | 沒有自己的 this，沿用定義時外層的 this |
