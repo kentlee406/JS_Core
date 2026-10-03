@@ -512,12 +512,109 @@ for (let i = 0; i < 3; i++) {
 // 結果：0 1 2
 ```
 
+延伸：不只 setTimeout，**把函式存起來、之後才執行**都會遇到相同問題
+```
+function a(){
+  var arr=[];
+  for(var i=0;i<3;i++){ arr.push(()=>console.log(i)); }
+  return arr;
+}
+var fns = a();
+fns[0](); // 3
+fns[1](); // 3
+fns[2](); // 3
+```
+* 原因：
+  1. `var i` 是**函式作用域**，整個 `a` 的執行環境中只有**一個** `i`。
+  2. 迴圈只是把三個箭頭函式放進陣列，**並沒有執行** `console.log(i)`；三個函式記住的是「同一個變數 `i`」，而不是當下的值。
+  3. 迴圈結束時 `i` 已經變成 3（`i<3` 不成立才跳出），`a` 回傳後，三個函式透過閉包仍能存取 `a` 的變數環境，呼叫時才去查 `i`，所以都印出 `3`。
+
+解決方式：
+```
+// 方法 1（最推薦）：var 改為 let
+// let 具有區塊作用域，for 迴圈每一輪都會建立新的 i，每個函式各自記住自己那一輪的 i
+function a(){
+  var arr=[];
+  for(let i=0;i<3;i++){ arr.push(()=>console.log(i)); }
+  return arr;
+}
+
+// 方法 2：IIFE 建立新的函式作用域，把當下的 i 以參數 j 傳入保存
+function a(){
+  var arr=[];
+  for(var i=0;i<3;i++){
+    (function(j){ arr.push(()=>console.log(j)); })(i);
+  }
+  return arr;
+}
+
+// 方法 3：函式工廠，每次呼叫 makeLog 都產生新的執行環境保存 n
+function a(){
+  var arr=[];
+  function makeLog(n){ return ()=>console.log(n); }
+  for(var i=0;i<3;i++){ arr.push(makeLog(i)); }
+  return arr;
+}
+
+// 方法 4：bind 預先綁定引數（參考 4-6），把當下的值「複製」進新函式
+function a(){
+  var arr=[];
+  for(var i=0;i<3;i++){ arr.push(console.log.bind(console, i)); }
+  return arr;
+}
+
+a().forEach(fn => fn()); // 以上皆為：0 1 2
+```
+* 共通觀念：要讓每個函式記住**不同的值**，就必須讓每一輪都有**各自獨立的變數環境**（let 的區塊作用域、或每次呼叫函式產生新的執行環境），或直接把值複製進去（bind）。
+
 #### 四、注意事項
 閉包會讓變數持續存在記憶體中，若大量或不當使用（例如保存大型資料、DOM 節點）可能造成記憶體洩漏；不再需要時可將參考設為 `null`，讓垃圾回收機制釋放。
 
 ### 4-5 閉包進階：工廠模式與私有方法
 #### 一、工廠模式（Factory Pattern）
 利用函式「量產」物件，每次呼叫都回傳一個新的物件；搭配閉包，每個物件都擁有自己獨立的狀態。
+
+範例：從 4-4 的 `storeMoney` 改寫，說明函式工廠與私有變數
+```
+function storeMoney(initValue){
+  var money = initValue || 1000;
+  return function (price){money+=price; return money}
+}
+var MingMoney=storeMoney(100);
+console.log(MingMoney(500)); // 600
+```
+* **函式工廠**：
+  * `storeMoney` 像一座工廠，本身不做存錢的動作，而是**生產**「存錢函式」並回傳。
+  * 透過參數 `initValue` 可以客製化產品：`storeMoney(100)` 產生初始金額 100 的錢包；不傳引數時 `initValue` 為 `undefined`，`||` 會取預設值 1000。
+  * 每呼叫一次工廠就建立一個新的執行環境，產出的函式各自擁有獨立的 `money`：
+    ```
+    var JayMoney = storeMoney();   // 從 1000 開始
+    console.log(JayMoney(500));    // 1500
+    console.log(MingMoney(500));   // 1100（與 JayMoney 互不影響）
+    ```
+* **私有變數**：
+  * `money` 宣告在 `storeMoney` 內，外部無法直接讀取或修改（`MingMoney.money` 為 `undefined`，直接寫 `money` 則是 ReferenceError）。
+  * 唯一能操作 `money` 的管道就是回傳的函式，這個能存取私有變數、並對外公開的函式稱為**特權方法**（Privileged Method）。
+* **私有方法**：此範例只有私有「變數」；若在工廠內再宣告一個**不回傳**的函式，就成為私有方法，只能由內部呼叫：
+  ```
+  function storeMoney(initValue){
+    var money = initValue ?? 1000;       // 改用 ??：只有 null/undefined 才取預設值
+    function check(price){               // 私有方法：外部無法呼叫
+      return typeof price === "number" && money + price >= 0;
+    }
+    return function (price){             // 特權方法：對外公開的唯一介面
+      if (!check(price)) return "金額錯誤";
+      money += price;
+      return money;
+    }
+  }
+  var MingMoney = storeMoney(100);
+  console.log(MingMoney(500));    // 600
+  console.log(MingMoney(-1000));  // 金額錯誤（餘額不可為負）
+  ```
+* 注意：`initValue || 1000` 在傳入 `0` 時，因為 0 是 falsy，會被當成 1000；若允許初始金額為 0，應改用 `??`（空值合併運算子）或 ES6 預設參數 `function storeMoney(initValue = 1000)`（參考 4-3）。
+
+當工廠需要回傳**多個**方法時，就改為回傳物件：
 ```
 function createCounter(initValue) {
   var count = initValue; // 每次呼叫都會建立新的 count
@@ -824,3 +921,174 @@ btn.addEventListener("click", app.add.bind(app)); // 1, 2, 3...：this 為 app
 | `call` / `apply` / `bind` | 指定的物件 |
 | DOM 事件 `addEventListener` | 綁定事件的元素 |
 | 箭頭函式 | 沒有自己的 this，沿用定義時外層的 this |
+
+
+#### 六、this課後練習
+請寫出以下各題的執行結果並說明原因
+##### 第1題
+```
+function callName(){
+  console.log(this.name);
+}
+var a = {
+  name: 'b',
+  callName: callName,
+  c: {
+    name: 'd',
+    callName: callName
+  }
+}
+console.log(a.callName(), a.c.callName());
+```
+##### 第2題
+```
+function callName(){
+  console.log(this.name);
+}
+var a = {
+  name: 'b',
+  callName: callName,
+  c: {
+    name: 'd',
+    callName: callName
+  }
+}
+var w=a;
+var x=a.c;
+var y=w.callName();
+var z=x.callName;
+console.log(y, z);
+```
+##### 第3題
+```
+var name="Ming";
+function namefu(){
+  console.log(this.name);
+}
+var a={ name: "Wang", myname: namefu };
+namefu.name= "Mei"
+a.myname();
+```
+
+##### 第4題
+```
+var name='Ming';
+var obj={
+  x:()=>{
+    name: 'Wang';
+    console.log(this.name);
+  },
+  y:'Mei',
+}
+obj.x();
+```
+##### 第5題
+```
+var name='Ming';
+var obj={
+  x:()=>{
+    name='Wang';
+    console.log(this.name);
+  },
+  y:'Mei',
+}
+obj.x();
+```
+
+##### 第6題
+```
+var name='Ming';
+var obj={
+  x: {
+    name: 'Wang',
+    myName: function(){
+      console.log(this.name);
+      setTimeout(()=>{console.log(this.name);}, 500)
+    }
+  },
+  y:'Mei',
+  name: 'Hu',
+}
+obj.x.myName();
+```
+
+##### 第7題
+```
+function callName(name){
+  console.log(this.name, name);
+}
+var name="Wang";
+var x={name: "Mei"};
+callName(undefined, "Ming");
+callName.call(x, "Ming");
+```
+##### 第8題
+```
+var name="Wang";
+var x={
+  name: "Mei",
+  callName: function(){
+    console.log(this.name);
+  }
+};
+(()=>{
+  var a = x.callName;
+  a();
+})();
+```
+##### 第9題
+```
+var name="Wang";
+function callName(name){
+  console.log(this.name);
+}
+var obj={
+  name: "Mei",
+  family: {name: "Wang"}
+}
+
+callName.name="Power";
+var a=callName.bind(obj, "Chen");
+a();
+```
+
+
+##### 答案
+> 前提：以下皆假設在瀏覽器、非嚴格模式的全域環境下執行（全域 `this` 為 `window`，全域 `var` 會成為 `window` 的屬性）。
+1. 輸出：`b` → `d` → `undefined undefined`
+   * `console.log` 會先計算參數：`a.callName()` 以物件方法調用，`this` 為 `a`，印出 `b`；`a.c.callName()` 的 `this` 為 `a.c`，印出 `d`。
+   * 兩個函式都沒有 `return`，回傳值皆為 `undefined`，所以最外層印出 `undefined undefined`。
+
+2. 輸出：`b` → `undefined ƒ callName(){ console.log(this.name); }`
+   * `w` 與 `a` 指向同一個物件，`w.callName()` 的 `this` 為 `a`，印出 `b`，回傳 `undefined`，所以 `y` 為 `undefined`。
+   * `z = x.callName` 只是取得函式本身，並沒有呼叫，所以 `z` 是函式；印出 `undefined` 與函式內容。
+
+3. 輸出：`Wang`
+   * `a.myname()` 以物件方法調用，`this` 為 `a`，`this.name` 為 `Wang`。
+   * 全域的 `name="Ming"` 只有在簡易呼叫 `namefu()` 時才會印出。
+   * `namefu.name = "Mei"` 不會生效：函式的 `name` 屬性是唯讀的（非嚴格模式下靜默失敗），且它與 `this.name` 無關。
+
+4. 輸出：`Ming`
+   * 箭頭函式內的 `name: 'Wang';` 不是賦值，而是「標籤（label）＋字串運算式」，不會改變任何變數。
+   * 箭頭函式沒有自己的 `this`，沿用定義時外層（全域）的 `this`，即 `window`，`window.name` 為 `Ming`。
+
+5. 輸出：`Wang`
+   * 箭頭函式的 `this` 為 `window`；函式內 `name='Wang'` 沒有宣告，會修改全域變數 `name`（即 `window.name`），所以印出 `Wang`。
+
+6. 輸出：`Wang` →（500ms 後）`Wang`
+   * `obj.x.myName()` 以物件方法調用，`this` 為「點前面的物件」`obj.x`（不是 `obj`），所以印出 `Wang` 而非 `Hu`。
+   * `setTimeout` 中的箭頭函式沒有自己的 `this`，沿用外層 `myName` 的 `this`（`obj.x`），500ms 後再印出 `Wang`。
+   * 若改成一般函式 `setTimeout(function(){...})`，回呼函式為簡易呼叫，`this` 為 `window`，會印出 `Ming`。
+
+7. 輸出：`Wang undefined` → `Mei Ming`
+   * `callName(undefined, "Ming")` 為簡易呼叫，`this` 為 `window`，`this.name` 為 `Wang`；第一個參數 `undefined` 傳給 `name`，`"Ming"` 沒有對應的參數被忽略。
+   * `callName.call(x, "Ming")`：`call` 的第一個參數指定 `this` 為 `x`，`this.name` 為 `Mei`；`"Ming"` 傳給參數 `name`。
+
+8. 輸出：`Wang`
+   * `var a = x.callName` 只是把函式取出指定給變數，與 `x` 失去關聯。
+   * `a()` 是簡易呼叫，`this` 為 `window`，印出全域的 `Wang`。外層包著的箭頭函式 IIFE 不影響 `a()` 的呼叫方式。
+
+9. 輸出：`Mei`
+   * `bind(obj, "Chen")` 回傳一個 `this` 永久綁定為 `obj` 的新函式，`"Chen"` 預先傳入參數 `name`。
+   * `a()` 執行時 `this` 為 `obj`，`this.name` 為 `Mei`。
+   * `callName.name = "Power"` 同第3題，函式 `name` 屬性唯讀，不會生效也與 `this` 無關；`family` 屬性在此題沒有作用。
