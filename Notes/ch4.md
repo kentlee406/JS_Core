@@ -1092,3 +1092,355 @@ a();
    * `bind(obj, "Chen")` 回傳一個 `this` 永久綁定為 `obj` 的新函式，`"Chen"` 預先傳入參數 `name`。
    * `a()` 執行時 `this` 為 `obj`，`this.name` 為 `Mei`。
    * `callName.name = "Power"` 同第3題，函式 `name` 屬性唯讀，不會生效也與 `this` 無關；`family` 屬性在此題沒有作用。
+
+
+### 4-7 函式陷阱題與課後練習
+```
+console.clear();
+// 更多題目：https://www.facebook.com/levelhunt/?locale=zh_TW
+
+var myName="Global";
+
+// Question 1
+var person={
+  myName: "Ming",
+  getName: function(){
+    return this.myName;
+  }
+}
+var getName = person.getName;
+console.log(getName());
+
+// Question 2
+var obj={
+  myName: "Ming",
+  fn: function(a, b, c){
+    return [this.myName, a, b, c];
+  }
+}
+var fnA=obj.fn;
+var fnB=fnA.bind(null, 0);
+console.log(fnB(1,2));  
+
+// 若要將輸出改成 [null, 0, 1, 2]的方式，將函式改為 'use strict'，並將this.myName改成this
+
+// Question 3
+var foo={
+  myName: "Ming",
+  bar: function(){
+    return this.myName;
+  }
+}
+console.log(foo.bar()); 
+console.log(foo.bar); 
+console.log((foo.bar=foo.bar)()); 
+console.log((false||foo.bar)());  
+
+var b={};
+Object.defineProperty(b, 'myName', {value: "Mary", writable: false});
+b.myName="John";
+console.log(b.myName); 
+
+// Question 4
+var arr=['1','2','3'].map(parseInt);
+console.log(arr); // [1,null,null]
+
+// Question 5
+// function a(fu){
+//   fu();
+// }
+// a(myName); 
+
+// Question 6
+// a, b, c, d分別是表達式還是陳述式
+function a(){
+  console.log(myName);
+}
+function b(){
+  return myName;
+}
+var c=function (){
+  console.log(myName);
+}
+var d;
+
+
+// Question 7
+(function(){
+  console.log(myName);
+}());
+
+// Question 8
+function myMoney(storage){
+  var money=storage||10000;
+  return function (price){
+    return{
+      fx: function(){ return console.log(money); },
+      fy: function(price){
+        if(money<price) return console.log("A");
+        if(!money<0) return money=money-price;
+        return console.log("B");
+      }
+    }
+  }
+}
+
+var John = myMoney(9000);
+var Mary = myMoney(10000);
+var Tony = myMoney(12000);
+for(let i=1;i<=2;i++){
+  John().fy(8000);
+  John().fx();
+  Mary().fy(8000);
+  Mary().fx();
+  Tony().fy(8000);
+  Tony().fx();
+}
+
+
+// Question 9
+var a=1;
+var obj={x: function(){a=2; console.log(this.name)}, y:2, a:3}
+obj.x();  
+
+// Question 10
+var name="Kent";
+function sayHi(){
+  var name="Argus";
+  console.log(this.name);
+}
+var objx={name: "Peter", callName: sayHi};
+objx.callName(); 
+
+// Question 11
+function g(g){ g(); }
+function h(h){ h(); }
+function i(i){ console.log("i"); }
+g(h(i));
+
+
+```
+
+#### 答案
+1. Global
+2. ["Global",0,1,2]
+3. Ming, function(){ return this.myName; }, Global, Global, Mary
+4. [1,null,null]
+5. Message: fu is not a funciton
+6. a-陳述式、b-陳述式、c-表達式、d-陳述式
+7. Global
+8. 
+"B"
+9000
+"B"
+10000
+"B"
+12000
+"B"
+9000
+"B"
+10000
+"B"
+12000
+9. undefined
+10. Peter
+11. "i" g is not a function
+
+#### 解析
+> 前提：同 4-6，以下皆假設在瀏覽器、非嚴格模式的全域環境下執行（全域 `this` 為 `window`，全域 `var` 會成為 `window` 的屬性），因此 `this.myName` 在全域下等同 `window.myName`，值為 `"Global"`。
+
+##### Question 1：方法被取出後失去 this
+```
+var getName = person.getName;
+console.log(getName());   // Global
+```
+* `person.getName` 沒有加上 `()`，只是把函式「取出來」指定給變數 `getName`，此時函式與 `person` 已經沒有關聯。
+* `this` 不是由函式定義的位置決定，而是由「呼叫方式」決定。`getName()` 前面沒有物件，屬於簡易呼叫，`this` 指向 `window`。
+* `window.myName` 為全域的 `"Global"`，所以印出 `Global`；若寫成 `person.getName()` 才會印出 `Ming`。
+
+##### Question 2：bind 傳入 null 與預先傳入參數
+```
+var fnA = obj.fn;
+var fnB = fnA.bind(null, 0);
+console.log(fnB(1,2));    // ["Global", 0, 1, 2]
+```
+* `fnA = obj.fn` 同 Question 1，函式被取出，與 `obj` 失去關聯。
+* `bind(null, 0)` 做了兩件事：
+  1. 綁定 `this` 為 `null`：非嚴格模式下，`this` 若被指定為 `null` 或 `undefined`，會自動被替換成全域物件 `window`，所以 `this.myName` 為 `"Global"`。
+  2. 預先傳入第一個參數：`a` 被固定為 `0`（又稱部分套用 Partial Application）。
+* 呼叫 `fnB(1, 2)` 時，新傳入的引數會接在預先傳入的引數後面，所以 `b = 1`、`c = 2`，結果為 `["Global", 0, 1, 2]`。
+* 若在函式內加上 `'use strict'`，`this` 不會被替換成 `window`，會維持 `null`；此時再存取 `this.myName` 會因為 `null.myName` 拋出 TypeError，所以題目中提到要將 `this.myName` 改成 `this`，輸出才會是 `[null, 0, 1, 2]`。
+```
+var obj={
+  myName: "Ming",
+  fn: function(a, b, c){
+    'use strict';
+    return [this, a, b, c];
+  }
+}
+console.log(obj.fn.bind(null, 0)(1, 2)); // [null, 0, 1, 2]
+```
+
+##### Question 3：運算式回傳的函式會失去 this、唯讀屬性
+```
+console.log(foo.bar());                  // Ming
+console.log(foo.bar);                    // ƒ (){ return this.myName; }
+console.log((foo.bar=foo.bar)());        // Global
+console.log((false||foo.bar)());         // Global
+```
+* `foo.bar()`：物件方法調用，`this` 為 `foo`，印出 `Ming`。
+* `foo.bar`：沒有呼叫，印出函式本身。
+* `(foo.bar=foo.bar)()`：
+  * 賦值運算式 `=` 本身也會回傳一個值，也就是「右邊的函式」。
+  * 括號內運算完的結果只是一個單純的函式值，已經不是 `foo.bar` 這種「物件.屬性」的參考，所以接著 `()` 呼叫時屬於簡易呼叫，`this` 為 `window`，印出 `Global`。
+* `(false||foo.bar)()`：
+  * `||` 會回傳第一個轉型為 true 的值，`false` 為假，所以回傳 `foo.bar` 這個函式。
+  * 同上，回傳的是單純的函式值，呼叫時 `this` 為 `window`，印出 `Global`。
+* 判斷技巧：只看呼叫的那一刻，`()` 的正前方是不是「物件.方法」的形式；只要經過賦值、`||`、`&&`、逗號 `,` 等運算，就會失去 `this`。
+  * 注意：單純加上括號 `(foo.bar)()` 不算運算，`this` 仍然是 `foo`，會印出 `Ming`。
+
+```
+var b={};
+Object.defineProperty(b, 'myName', {value: "Mary", writable: false});
+b.myName="John";
+console.log(b.myName);    // Mary
+```
+* `Object.defineProperty` 可以定義屬性的特性，`writable: false` 表示此屬性唯讀、不能被修改。
+* `b.myName = "John"` 在非嚴格模式下會「靜默失敗」（不報錯但也不會生效），所以仍然印出 `Mary`。
+* 若在嚴格模式下，則會拋出 `TypeError: Cannot assign to read only property 'myName' of object`。
+* 這也是 4-6 第3題 `namefu.name = "Mei"` 不生效的原因：函式的 `name` 屬性預設就是 `writable: false`。
+
+##### Question 4：map 搭配 parseInt
+```
+var arr=['1','2','3'].map(parseInt);
+console.log(arr);         // [1, NaN, NaN]
+```
+* `map` 的回呼函式會收到三個引數：`(元素, 索引, 原陣列)`。
+* `parseInt(string, radix)` 的第二個參數是「進位制」(radix)，可接受 2~36，或 0（代表自動判斷，一般視為 10 進位）。
+* 因此實際執行的是：
+
+| 呼叫 | 說明 | 結果 |
+| --- | --- | --- |
+| `parseInt('1', 0)` | radix 為 0，視為 10 進位 | `1` |
+| `parseInt('2', 1)` | radix 為 1，不在 2~36 範圍內 | `NaN` |
+| `parseInt('3', 2)` | 2 進位只有 0 和 1，`'3'` 無法解析 | `NaN` |
+
+* 在瀏覽器 console 會顯示 `[1, NaN, NaN]`；答案中的 `[1, null, null]` 是經過 `JSON.stringify` 處理後的結果（JSON 不支援 `NaN`，會轉成 `null`），部分線上編輯器的 console 也會以這種方式顯示。
+* 正確寫法：明確指定進位制，或改用 `Number`。
+```
+['1','2','3'].map((item) => parseInt(item, 10)); // [1, 2, 3]
+['1','2','3'].map(Number);                       // [1, 2, 3]
+```
+
+##### Question 5：把非函式當成函式呼叫
+```
+function a(fu){
+  fu();
+}
+a(myName);                // TypeError: fu is not a function
+```
+* `myName` 的值是字串 `"Global"`，傳入後參數 `fu = "Global"`。
+* `fu()` 試圖呼叫一個字串，所以拋出 `TypeError: fu is not a function`。
+* 若要正確執行，應傳入函式本身，例如 `a(function(){ console.log(myName); })`。
+* 補充：若直接把本題的註解拿掉、和其他題目放在同一個檔案執行，結果會不同。因為函式陳述式會被提升，Question 6 也宣告了 `function a()`，後宣告的會覆蓋先宣告的，所以 `a(myName)` 實際呼叫的是 Question 6 的 `a`，會印出 `Global` 而不會報錯。這也說明了在同一個作用域中重複使用變數名稱的風險。
+
+##### Question 6：函式陳述式與函式表達式
+* 判斷方式：以 `function` 關鍵字「開頭」的那一行是函式陳述式；`function` 出現在 `=` 右邊等「需要一個值」的位置，則是函式表達式。
+* `a`：函式陳述式（具名函式），會整個被提升，可在宣告前呼叫。
+* `b`：函式陳述式，函式內有沒有 `return` 不影響它是陳述式。
+* `c`：`var c = ...` 這一整行是變數宣告的陳述式，但等號右邊的 `function (){...}` 是函式表達式（匿名函式）。只有變數 `c` 會被提升（值為 `undefined`），在賦值前呼叫 `c()` 會出現 `TypeError: c is not a function`。
+* `d`：`var d;` 是變數宣告陳述式，跟函式無關，值為 `undefined`。
+* 補充：陳述式不會回傳值，表達式（運算式）會產生一個值，這也是 Question 3 `(foo.bar=foo.bar)` 會回傳函式的原因。
+
+##### Question 7：立即函式
+```
+(function(){
+  console.log(myName);
+}());                     // Global
+```
+* 用括號包住函式，讓 `function` 不在開頭，就會變成函式表達式，後面再加上 `()` 即可立即執行（見 4-2）。
+* `(function(){}())` 與 `(function(){})()` 兩種寫法效果相同。
+* 函式內沒有宣告 `myName`，依照範圍鏈往外層（全域）尋找，找到 `"Global"`。
+
+##### Question 8：閉包與運算子優先順序
+```
+function myMoney(storage){
+  var money=storage||10000;
+  return function (price){
+    return{
+      fx: function(){ return console.log(money); },
+      fy: function(price){
+        if(money<price) return console.log("A");
+        if(!money<0) return money=money-price;
+        return console.log("B");
+      }
+    }
+  }
+}
+```
+* 結構分析：
+  1. `myMoney(9000)` 執行後，`money = 9000`，回傳一個內層函式指定給 `John`，此時形成閉包，`money` 被保存在 `John` 自己的環境中。
+  2. `John`、`Mary`、`Tony` 各自呼叫一次 `myMoney`，所以擁有三個互相獨立的 `money`（9000、10000、12000）。
+  3. 每次執行 `John()` 都會回傳一個「新的」物件，但物件中的 `fx`、`fy` 參考的都是同一個 `money`，所以 `fy` 修改金額後，下一次 `John().fx()` 讀到的是修改後的值。
+  4. 外層 `function (price)` 的參數 `price` 沒有被使用，且被 `fy` 自己的參數 `price` 遮蔽。
+* 以 `John().fy(8000)` 逐行判斷：
+  1. `money < price` → `9000 < 8000` 為 `false`，不執行。
+  2. `!money < 0`：`!` 的優先順序比 `<` 高，所以實際上是 `(!money) < 0`：
+     * `!9000` → `false`
+     * `false < 0` → 比較時 `false` 轉型為 `0`，`0 < 0` 為 `false`，不執行扣款。
+     * 只要 `money` 不為 0，`!money` 永遠是 `false`；就算是 0，`!0` 為 `true`，`1 < 0` 仍為 `false`。所以這行條件「永遠不成立」，金額永遠不會被扣除。
+  3. 執行 `return console.log("B")`，印出 `B`。
+* `John().fx()` 印出 9000，Mary、Tony 同理；迴圈執行兩次，金額都沒有改變，所以輸出兩輪相同的 `B 9000 B 10000 B 12000`。
+* 若要做到預期的扣款效果，條件應改為 `if(!(money<price))` 或 `if(money>=price)`，此時輸出會變成：
+
+| 輪次 | John | Mary | Tony |
+| --- | --- | --- | --- |
+| 第1輪 | 扣款後 money 為 1000，印出 `1000` | `2000` | `4000` |
+| 第2輪 | `1000 < 8000`，印出 `A`、`1000` | `A`、`2000` | `A`、`4000` |
+
+##### Question 9：變數與物件屬性的差別
+```
+var a=1;
+var obj={x: function(){a=2; console.log(this.name)}, y:2, a:3}
+obj.x();                  // undefined
+```
+* `obj.x()` 為物件方法調用，`this` 為 `obj`。
+* `obj` 只有 `x`、`y`、`a` 三個屬性，沒有 `name`，存取不存在的屬性會得到 `undefined`。
+* `a=2` 修改的是「變數」：函式內沒有宣告 `a`，沿著範圍鏈找到全域變數 `a`，所以全域 `a` 從 1 變成 2。
+* 物件的屬性 `a: 3` 不在範圍鏈上，必須透過 `this.a` 或 `obj.a` 才能存取，所以 `obj.a` 仍然是 3。
+
+##### Question 10：this 與範圍鏈
+```
+var name="Kent";
+function sayHi(){
+  var name="Argus";
+  console.log(this.name);
+}
+var objx={name: "Peter", callName: sayHi};
+objx.callName();          // Peter
+```
+* `objx.callName()` 為物件方法調用，`this` 為 `objx`，`this.name` 為 `Peter`。
+* 函式內的區域變數 `name = "Argus"` 只有在直接寫 `name`（透過範圍鏈查找變數）時才會用到；`this.name` 是「查找物件的屬性」，兩者是不同的查找機制。
+* 全域的 `"Kent"` 只有在簡易呼叫 `sayHi()` 時才會印出。
+
+| 寫法 | 查找方式 | 結果 |
+| --- | --- | --- |
+| `this.name` | 物件屬性，由呼叫方式決定 | `Peter` |
+| `name` | 範圍鏈，由定義位置決定 | `Argus` |
+
+##### Question 11：參數名稱遮蔽函式名稱
+```
+function g(g){ g(); }
+function h(h){ h(); }
+function i(i){ console.log("i"); }
+g(h(i));                  // "i" → TypeError: g is not a function
+```
+* 呼叫函式前，會先計算引數的值，所以先執行內層的 `h(i)`：
+  1. 參數 `h` 接收了函式 `i`，在函式 `h` 內部，參數 `h` 會遮蔽外層的函式名稱 `h`。
+  2. `h()` 實際上呼叫的是函式 `i`，印出 `i`。
+  3. 函式 `h` 沒有 `return`，回傳 `undefined`。
+* 接著執行 `g(undefined)`：
+  1. 參數 `g` 為 `undefined`，同樣遮蔽了外層的函式名稱 `g`。
+  2. `g()` 等於呼叫 `undefined()`，拋出 `TypeError: g is not a function`。
+* 重點：函式內的參數就是區域變數，名稱與外層相同時會優先使用參數（遮蔽 Shadowing），實務上應避免參數與函式同名。
+
