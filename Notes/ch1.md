@@ -59,6 +59,20 @@ console.log(obj.name);
 ```
 [詳細說明](https://share.gemini.google/jtkjHZzpav6z)
 
+#### 練習：請判斷下列程式碼或錯誤訊息屬於LHS或是RHS。
+1. 2=x;
+2. 'use strict'; x=2;
+3. x is not defined.
+4. var x=2; x();
+5. "2"=x;
+
+答案
+1. LHS
+2. LHS
+3. RHS
+4. RHS
+5. LHS
+
 ### 1-3 語法作用域
 #### 一、意義
 JavaScript 的語法作用域（Lexical Scope，又稱詞法作用域或靜態作用域）是定義變數存取權限的一套規則。
@@ -66,9 +80,9 @@ JavaScript 的語法作用域（Lexical Scope，又稱詞法作用域或靜態�
 核心觀念非常簡單：變數的作用域在「程式碼寫好的那一刻（編譯/解析階段）」就已經決定了，而不是在程式碼「執行」時決定。
 
 #### 二、靜態作用域與動態作用域
-1. 靜態作用域（Lexical Scope，JS採用的機制）： 函式在哪裡定義，決定了它能存取哪些變數。
+1. 靜態作用域（Lexical Scope，JS採用的機制）： 變數作用域在語法解析時已確定作用域且不會改變。
 
-2. 動態作用域（Dynamic Scope）： 函式在哪裡呼叫，決定了它能存取哪些變數（JS 不採用此機制）。
+2. 動態作用域（Dynamic Scope）： 函式呼叫時才採用此機制（JS 不採用此機制）。
 
 3. JS範例說明
 當 fn1 印出 value 時，因為 fn1 是在全域環境中定義的，其外層作用域就是全域。即使它是在 fn2 內部被呼叫，它依然會存取定義時所在環境的 value（全域變數）。
@@ -99,10 +113,39 @@ fn2(); // 印出："全域變數"
   * 使用 let 和 const 宣告的變數具有區塊作用域，離開 {} 後即無法存取。
   * 使用 var 宣告的變數不具備區塊作用域（只會受函式作用域限制）。
 
-### 四、總結
+#### 四、總結
 1. 靜態性： 作用域取決於程式碼寫在哪裡，而非在哪裡執行。
 2. 作用域鏈： 搜尋變數由內而外，找不到就往上一層找。
 3. 區塊保護： ES6 推薦使用 let 與 const 建立明確的區塊作用域，避免變數污染全域或不小心被覆蓋。
+
+#### 五、練習
+請判斷以下情況屬於「靜態作用域」或「動態作用域」
+1. 又稱為語法作用域的是______。
+2. 程式碼執行時決定變數作用域的是______。
+3. JavaScript的範圍鍊屬於______。
+4. 以下JavaScript的執行結果是_____，原因：_______。
+```
+let value = '動態作用域';
+
+function fn1() {
+  console.log(value);
+}
+
+function fn2() {
+  let value = '靜態作用域';
+  fn1();
+}
+
+fn2();
+```
+
+答案：
+1. 靜態作用域
+2. 動態作用域
+3. 靜態作用域
+3. 動態作用域，因為fn2()中賦予value變數為"靜態作用域"只能在fn2()內有效。
+三、執行順序：a()→c()→b()，執行堆疊結束順序：b()→c()→a()
+
 
 ### 1-4 執行環境與執行堆疊
 #### 一、 全域執行環境（Global Execution Context）
@@ -265,7 +308,8 @@ console.log(myName);
 * 執行 console.log(myName)：印出當前全域變數 myName 的值，結果即為 '小明'。
 
 ### 1-7 Not Defined vs. Undefined
-
+undefined: 宣告沒給值 (一種資料型態)
+not defined: 沒宣告
 ```
 let a;
 console.log(a);  // undefined
@@ -407,7 +451,7 @@ function x(){
   a="Tom";
 }
 var a="Kent";
-sayHi();
+x();
 console.log(a);
 ```
 

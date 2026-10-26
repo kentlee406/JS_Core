@@ -1072,8 +1072,8 @@ a();
    * 箭頭函式內的 `name: 'Wang';` 不是賦值，而是「標籤（label）＋字串運算式」，不會改變任何變數。
    * 箭頭函式沒有自己的 `this`，沿用定義時外層（全域）的 `this`，即 `window`，`window.name` 為 `Ming`。
 
-5. 輸出：`Wang`
-   * 箭頭函式的 `this` 為 `window`；函式內 `name='Wang'` 沒有宣告，會修改全域變數 `name`（即 `window.name`），所以印出 `Wang`。
+5. 輸出：`Ming`
+   * 箭頭函式的 `this` 為 `window`；函式內 `name='Wang'` 沒有宣告，會修改全域變數 `name`（即 `window.name`），所以印出 `Ming`。
 
 6. 輸出：`Wang` →（500ms 後）`Wang`
    * `obj.x.myName()` 以物件方法調用，`this` 為「點前面的物件」`obj.x`（不是 `obj`），所以印出 `Wang` 而非 `Hu`。

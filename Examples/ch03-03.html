@@ -14,7 +14,7 @@
       console.log(x.b.c); // Uncaught TypeError: Cannot read properties of undefined (reading 'c')
       console.log(x?.b?.c); // undefined
 
-      // 針對為定義的物件屬性賦值
+      // 針對未定義的物件屬性賦值
       x.b = { c: 3 };
       console.log(x); // { a: 1, b: { c: 3 } }
     </script>
