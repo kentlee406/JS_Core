@@ -12,3 +12,8 @@
 - [第十章  ES6 章節：Promise](./Notes/ch10.md)
 - [第十一章  ES6 章節：Async/Await](./Notes/ch11.md)
 - [第十二章  ES6 章節：Class](./Notes/ch12.md)
+
+## 模擬測驗
+
+- [單選題測驗（共 50 題）](./Exam/questions.md)：涵蓋第 1～12 章
+- [測驗答案與詳解](./Exam/answer.md)：先列出 50 題答案，再附上每題詳解
